@@ -1,0 +1,170 @@
+version: 1.0.0
+name: "jincor-metanetwork"
+description: "The network to be in if you want to make a business with smart contracts"
+x-type: "hlfv1"
+x-loggingLevel: info
+
+client:
+  organization: JincorNetwork
+  logging:
+    level: info
+  peer:
+    timeout:
+      connection: 3s
+      queryResponse: 30s
+      executeTxResponse: 30s
+  eventService:
+    timeout:
+      connection: 3s
+      registrationResponse: 3s
+  orderer:
+    timeout:
+      connection: 3s
+      response: 5s
+  cryptoconfig:
+    path: /crypto-config/crypto-config
+
+  credentialStore:
+    path: ./hfc-kvs
+    cryptoStore:
+      path: ./msp
+    wallet: wallet
+
+  BCCSP:
+    security:
+      enabled: true
+      default:
+        provider: "SW" # HSM PKCS11
+      hashAlgorithm: "SHA2"
+      softVerify: true
+      ephemeral: false
+      level: 256
+
+      # pin: "98765432"
+      # label: "ForFabric"
+
+channels:
+  common:
+    orderers:
+      - orderer0.orderer.jincor.com
+      - orderer1.orderer.jincor.com
+      - orderer2.orderer.jincor.com
+
+    peers:
+      peer0.network.jincor.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+
+      peer1.network.jincor.com:
+        endorsingPeer: true
+        chaincodeQuery: true
+        ledgerQuery: true
+        eventSource: true
+
+    chaincodes:
+      - chaincode1:v0
+      - chaincode2:v0
+
+organizations:
+  JincorNetwork:
+    mspid: JincorNetwork
+
+    cryptoPath:  /crypto-config/crypto-config/peerOrganizations/network.jincor.com/users/{userName}@network.jincor.com/msp
+
+    peers:
+      - peer0.network.jincor.com
+      - peer1.network.jincor.com
+
+    certificateAuthorities:
+      - ca.network.jincor.com
+
+    adminPrivateKey:
+      path: /crypto-config/crypto-config/peerOrganizations/network.jincor.com/users/Admin@network.jincor.com/msp/keystore/**private_key**_sk
+
+    signedCert:
+      path: /crypto-config/crypto-config/peerOrganizations/network.jincor.com/users/Admin@network.jincor.com/msp/signcerts/Admin@network.jincor.com-cert.pem
+
+  ordererorg:
+      mspID: JincorOrderer
+      cryptoPath: /crypto-config/crypto-config/ordererOrganizations/jincor.com/users/{userName}@jincor.com/msp
+
+orderers:
+  orderer0.orderer.jincor.com:
+    url: grpcs://orderer0.orderer.jincor.com:7050
+
+    grpcOptions:
+      ssl-target-name-override: orderer0.orderer.jincor.com
+      grpc-max-send-message-length: 15
+
+    tlsCACerts:
+      path: /crypto-config/crypto-config/ordererOrganizations/jincor.com/tlsca/tlsca.jincor.com-cert.pem
+
+  orderer1.orderer.jincor.com:
+    url: grpcs://orderer1.orderer.jincor.com:8050
+
+    grpcOptions:
+      ssl-target-name-override: orderer1.orderer.jincor.com
+      grpc-max-send-message-length: 15
+
+    tlsCACerts:
+      path: /crypto-config/crypto-config/ordererOrganizations/jincor.com/tlsca/tlsca.jincor.com-cert.pem
+
+  orderer2.orderer.jincor.com:
+    url: grpcs://orderer2.orderer.jincor.com:9050
+
+    grpcOptions:
+      ssl-target-name-override: orderer2.orderer.jincor.com
+      grpc-max-send-message-length: 15
+
+    tlsCACerts:
+      path: /crypto-config/crypto-config/ordererOrganizations/jincor.com/tlsca/tlsca.jincor.com-cert.pem
+
+peers:
+  peer0.network.jincor.com:
+    url: grpcs://peer0.network.jincor.com:7051
+    eventUrl: grpcs://peer0.network.jincor.com:7053
+    grpcOptions:
+      ssl-target-name-override: peer0.network.jincor.com
+      grpc.http2.keepalive_time: 15
+    tlsCACerts:
+      path: /crypto-config/crypto-config/peerOrganizations/network.jincor.com/tlsca/tlsca.network.jincor.com-cert.pem
+
+  peer1.network.jincor.com:
+    url: grpcs://peer1.network.jincor.com:7056
+    eventUrl: grpcs://peer1.network.jincor.com:7058
+    grpcOptions:
+      ssl-target-name-override: peer1.network.jincor.com
+      grpc.http2.keepalive_time: 15
+    tlsCACerts:
+      path: /crypto-config/crypto-config/peerOrganizations/network.jincor.com/tlsca/tlsca.network.jincor.com-cert.pem
+
+certificateAuthorities:
+  ca.orderer.jincor.com:
+    url: https://ca.orderer.jincor.com:7055
+    httpOptions:
+      verify: true
+    tlsCACerts:
+      path: /crypto-config/fabric-ca/ca.orderer.jincor.com/tlsca-cert.pem
+      client:
+        keyfile: /crypto-config/fabric-ca/ca.orderer.jincor.com/tlsclient.key
+        certfile: /crypto-config/fabric-ca/ca.orderer.jincor.com/tlsclient.pem
+    registrar:
+      enrollId: Admin@ca.orderer.jincor.com
+      enrollSecret: 123456
+    caName: ca.orderer.jincor.com
+
+  ca.network.jincor.com:
+    url: https://ca.network.jincor.com:7054
+    httpOptions:
+      verify: true
+    tlsCACerts:
+      path: /crypto-config/fabric-ca/ca.network.jincor.com/tlsca-cert.pem
+      client:
+        keyfile: /crypto-config/fabric-ca/ca.network.jincor.com/tlsclient.key
+        certfile: /crypto-config/fabric-ca/ca.network.jincor.com/tlsclient.pem
+    registrar:
+      enrollId: Admin@ca.network.jincor.com
+      enrollSecret: 123456
+    caName: ca.network.jincor.com

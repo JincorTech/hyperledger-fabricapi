@@ -1,0 +1,270 @@
+FORMAT: 1A
+HOST: http://fabricapi:3000/
+
+
+# Jincor Hyperledger Fabric Api
+
+This is the internal service provided a REST like API for a Hyperledger Fabric network (HLF).
+In order to access the HLF blockchain by using any other application services should use this service.
+
+
+# API Endpoints Summary
+
+JWT_TOKEN should be passed for every API call in the HTTP headers,
+that was received after login to the service.
+
+1. `/api/auth/login [POST]` (not required JWT_TOKEN here) 
+1. `/api/cert-auths/users/actions/enroll [POST]`
+1. `/api/cert-auths/users/actions/enroll-from [POST]`
+1. `/api/cert-auths/users/actions/register [POST]`
+1. `/api/chaincodes/actions/deploy [POST]`
+1. `/api/channels/{CHANNEL_NAME}/chaincodes/{CHAINCODE_ID}/actions/initiate [POST]`
+1. `/api/channels/{CHANNEL_NAME}/chaincodes/{CHAINCODE_ID}/actions/invoke [POST]`
+1. `/api/channels/{CHANNEL_NAME}/chaincodes/{CHAINCODE_ID}/actions/query [POST]`
+
+
+## Service Authenication [/api/auth/login]
+
+### Login [POST]
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer {JWT_TOKEN}
+            Accept: application/vnd.jincor+json; version=1
+
+    + Body
+
+            {
+                "username": "Admin@network.jincor.com",
+                "password": "123456"
+            }
+
++ Response 200 (application/json)
+
+            {
+                "token": "...JWT_TOKEN..."
+            }
+
+
+## Certificate Authority: Enroll Certificate [/api/cert-auths/users/actions/enroll]
+
+### Enroll Certificate [POST]
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer {JWT_TOKEN}
+            Accept: application/vnd.jincor+json; version=1
+
+    + Body
+
+            {
+                "username": "Admin@network.jincor.com",
+                "password": "123456",
+                "attrs": [{
+                  "name": "group",
+                  "value": "owner"
+                }]
+            }
+
++ Response 200 (application/json)
+
+            {
+                "username": "Admin@network.jincor.com",
+                "isEnrolled": true
+            }
+
+
+## Certificate Authority: Enroll from Existing Keys Pair [/api/cert-auths/users/actions/enroll-from]
+
+### Enroll from Existing Keys Pair [POST]
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer {JWT_TOKEN}
+            Accept: application/vnd.jincor+json; version=1
+
+    + Body
+
+            {
+                "username": "MyUser@network.jincor.com",
+                "privateKeyPath": "path to pem: ----- BEGIN PRIVATE KEY -----\n......----- END PRIVATE KEY -----",
+                "publicKeyPath": "path to pem: ----- BEGIN CERTIFICATE -----\n......----- END CERTIFICATE -----",
+            }
+
++ Response 200 (application/json)
+
+            {
+                "username": "MyUser@network.jincor.com",
+                "isEnrolled": true
+            }
+
+
+## Certificate Authority: Register a User for Certificate Enrollment [/api/cert-auths/users/actions/register]
+
+### Register a User for Certificate Enrollment [POST]
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer {JWT_TOKEN}
+            Accept: application/vnd.jincor+json; version=1
+
+    + Body
+
+            {
+                "registerarUsername": "Admin@network.jincor.com",
+                "username": "MyUser@network.jincor.com",
+                "password": "123456",
+                "attrs": [{
+                  "name": "group",
+                  "value": "owner"
+                }]
+            }
+
++ Response 200 (application/json)
+
+            {
+                "username": "MyUser@network.jincor.com",
+                "isRegistered": true
+            }
+
+
+## Chaincode: Deploy [/api/chaincodes/actions/deploy]
+
+### Deploy [POST]
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer {JWT_TOKEN}
+            Accept: application/vnd.jincor+json; version=1
+
+    + Body
+
+            {
+                "id": "mychaincode:0",
+                "path": "github.com/JincorTech/my-awesome-chaincode",
+                "peers": [
+                  "peer0.network.jincor.com",
+                  "peer1.network.jincor.com"
+                ]
+            }
+
++ Response 200 (application/json)
+
+            {
+                "isDeployed": true
+            }
+
+
+## Channel: Initiate Chaincode on the Channel [/api/channels/{CHANNEL_NAME}/chaincodes/{CHAINCODE_ID}/actions/initiate]
+
++ Parameters
+    + CHANNEL_NAME (string) - existing channel name in a HLF.
+    + CHAINCODE_ID (string) - deployed chaincode (format chaincode:version).
+
+### Initiate Chaincode on the Channel [POST]
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer {JWT_TOKEN}
+            Accept: application/vnd.jincor+json; version=1
+
+    + Body
+
+            {
+                "args": "",
+                "peers": [
+                  "peer0.network.jincor.com",
+                  "peer1.network.jincor.com"
+                ]
+            }
+
++ Response 200 (application/json)
+
+            {
+                "isInitiated": true
+            }
+
+
+## Channel: Invoke Method of Chaincode [/api/channels/{CHANNEL_NAME}/chaincodes/{CHAINCODE_ID}/actions/invoke]
+
++ Parameters
+    + CHANNEL_NAME (string) - existing channel name in a HLF.
+    + CHAINCODE_ID (string) - deployed chaincode (format chaincode:version).
+
+### Invoke Method of Chaincode [POST] [POST]
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer {JWT_TOKEN}
+            Accept: application/vnd.jincor+json; version=1
+
+    + Body
+
+            {
+                "initiatorUsername": "MyUser@network.jincor.com",
+                "method": "setPartnerRate",
+                "args": ["account", "AnotherUser@network.jincor.com", "0.35"],
+                "transientMap": {
+                  "secretPinCode": "123456"
+                },
+                "commitTransaction": true,
+                "peers": [
+                  "peer0.network.jincor.com",
+                  "peer5.network.jincor.com"
+                ]
+            }
+
++ Response 200 (application/json)
+
+            {
+                "isInvoked": true
+            }
+
+
+## Channel: Query Method of Chaincode [/api/channels/{CHANNEL_NAME}/chaincodes/{CHAINCODE_ID}/actions/query]
+
++ Parameters
+    + CHANNEL_NAME (string) - existing channel name in a HLF.
+    + CHAINCODE_ID (string) - deployed chaincode (format chaincode:version).
+
+### Query Method of Chaincode [POST]
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer {JWT_TOKEN}
+            Accept: application/vnd.jincor+json; version=1
+
+    + Body
+
+            {
+                "initiatorUsername": "MyUser@network.jincor.com",
+                "method": "getBalance",
+                "args": ["account", "AnotherUser@network.jincor.com"]
+                "transientMap": {
+                  "secretPinCode": "123456"
+                },
+                "peers": [
+                  "peer0.network.jincor.com",
+                  "peer1.network.jincor.com",
+                  "peer3.network.jincor.com"
+                ]
+            }
+
++ Response 200 (application/json)
+
+            {
+                "data": [
+                  {"balance":"1", "currency": "eth"},
+                  {"balance":"1", "currency": "eth"},
+                  {"balance":"1", "currency": "eth"}
+                ]
+            }
+
