@@ -3,7 +3,7 @@ import { inject, injectable } from 'inversify';
 import { controller, httpDelete, httpPost } from 'inversify-express-utils';
 import 'reflect-metadata';
 
-import { FabricClientService } from '../services/fabric.service';
+import { FabricClientService } from '../services/fabric';
 import { CertificateAuthorityServiceType, CertificateAuthorityService } from '../services/certauth.service';
 import { responseAsUnbehaviorError } from '../helpers/responses';
 
@@ -21,8 +21,8 @@ export class CertAuthController {
   ) {
   }
 
-  private setCertAuthServiceContext(req: Request) {
-    this.certAuthService.setContext(FabricClientService.createFromRequest(req), req['identification']);
+  private setCertAuthServiceContext(req: AuthenticatedRequest) {
+    this.certAuthService.setContext(new FabricClientService(req.identification), req.identification);
   }
 
   @httpPost(
@@ -30,7 +30,7 @@ export class CertAuthController {
     'CertAuthEnrollFromExistsRequestValidator'
   )
   async enrollExisting(
-    req: Request,
+    req: AuthenticatedRequest,
     res: Response
   ): Promise<void> {
     try {
@@ -57,7 +57,7 @@ export class CertAuthController {
     'CertAuthEnrollRequestValidator'
   )
   async enroll(
-    req: Request,
+    req: AuthenticatedRequest,
     res: Response
   ): Promise<void> {
     try {
@@ -83,14 +83,14 @@ export class CertAuthController {
     'CertAuthRegisterRequestValidator'
   )
   async register(
-    req: Request,
+    req: AuthenticatedRequest,
     res: Response
   ): Promise<void> {
     try {
       this.setCertAuthServiceContext(req);
 
       const registerResult = await this.certAuthService.register(
-        req.body.registerarUsername,
+        req.body.registrarUsername,
         req.body.role,
         req.body.username,
         req.body.password,

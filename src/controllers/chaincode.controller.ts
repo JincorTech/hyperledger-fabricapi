@@ -3,7 +3,7 @@ import { inject, injectable } from 'inversify';
 import { controller, httpDelete, httpPost } from 'inversify-express-utils';
 import 'reflect-metadata';
 
-import { FabricClientService } from '../services/fabric.service';
+import { FabricClientService } from '../services/fabric';
 import { ChaincodeServiceType, ChaincodeService } from '../services/chaincode.service';
 import { responseAsUnbehaviorError } from '../helpers/responses';
 
@@ -21,8 +21,8 @@ export class ChaincodeController {
   ) {
   }
 
-  private setChaincodeServiceContext(req: Request) {
-    this.chaincodeService.setContext(FabricClientService.createFromRequest(req), req['identification']);
+  private setChaincodeServiceContext(req: AuthenticatedRequest) {
+    this.chaincodeService.setContext(new FabricClientService(req.identification), req.identification);
   }
 
   @httpPost(
@@ -30,7 +30,7 @@ export class ChaincodeController {
     'ChannelDeployChaincodeRequestValidator'
   )
   async deployChaincode(
-    req: Request,
+    req: AuthenticatedRequest,
     res: Response
   ): Promise<void> {
     try {

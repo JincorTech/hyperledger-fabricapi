@@ -1,10 +1,9 @@
 import * as fs from 'fs';
 import * as crypto from 'crypto';
-import { Response, Request, NextFunction } from 'express';
 import { injectable, inject } from 'inversify';
 import * as request from 'request';
-import 'reflect-metadata';
 import * as jwt from 'jsonwebtoken';
+import 'reflect-metadata';
 
 import config from '../config';
 import { Logger } from '../logger';
@@ -40,17 +39,6 @@ export interface BearerTokenService {
 }
 
 /**
- * IdentificationData
- */
-export interface IdentificationData {
-  password: string;
-  mspId: string;
-  username: string;
-  role: string;
-  networkConfigFile: string;
-}
-
-/**
  * Identify User by credentials
  */
 export interface IdentificationService {
@@ -78,7 +66,7 @@ export interface AuthenticationService {
   /**
    * Validate access token
    */
-  validate(token: string): Promise<boolean>;
+  validate(token: string): Promise<object|null>;
 }
 
 /**
@@ -260,13 +248,13 @@ export class StandardAuthenticationService implements AuthenticationService {
   /**
    * @inheritdoc
    */
-  async validate(token: string): Promise<boolean> {
+  async validate(token: string): Promise<object|null> {
     this.logger.verbose('Validate token %s', token);
     if (!token || !await this.tokenService.validate(token)) {
       this.logger.verbose('Token is invalid %s', token);
-      return false;
+      return null;
     }
     this.logger.verbose('Token is valid %s', token);
-    return true;
+    return this.tokenService.decode(token);
   }
 }

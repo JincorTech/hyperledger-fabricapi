@@ -8,7 +8,7 @@ import * as commonMiddlewares from './middlewares/common';
 import * as identify from './services/identify.service';
 import * as certauth from './services/certauth.service';
 import * as chaincode from './services/chaincode.service';
-import * as fabric from './services/fabric.service';
+import * as fabric from './services/fabric';
 
 import { AuthController } from './controllers/auth.controller';
 import { ChannelController } from './controllers/channel.controller';

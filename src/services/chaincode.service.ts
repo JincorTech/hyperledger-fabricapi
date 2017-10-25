@@ -1,13 +1,25 @@
 import * as fs from 'fs';
-import * as User from 'fabric-client/lib/User.js';
 import * as path from 'path';
+import * as User from 'fabric-client/lib/User.js';
 import * as FabricClient from 'fabric-client/lib/Client.js';
 import { injectable, inject } from 'inversify';
 
 import config from '../config';
 import { Logger } from '../logger';
-import { FabricClientService } from './fabric.service';
-import { IdentificationData } from './identify.service';
+import {
+  FabricClientService,
+  MspProvider
+} from './fabric';
+import {
+  ChaincodeCommutator,
+  ChaincodeInitiator,
+  TransientMap,
+  ChaincodePolicy
+} from './fabric/chaincode.service';
+import {
+  TransactionBroadcaster,
+  ProposalTransaction
+} from './fabric/transaction.service';
 
 // IoC
 export const ChaincodeServiceType = Symbol('ChaincodeServiceType');
@@ -19,27 +31,7 @@ export class InvalidArgumentException extends ChaincodeServiceException { }
 export class InvalidEndorsementException extends ChaincodeServiceException { }
 export class BroadcastingException extends ChaincodeServiceException { }
 
-// types
-export interface TransientMap {
-  [key: string]: string;
-}
-
-export interface ChaincodePolicyIdentity {
-  role: {
-    name: string;
-    mspId: string;
-  };
-}
-
-export interface ChaincodePolicySignedBy {
-  [key: string]: Array<ChaincodePolicySignedBy>|number;
-}
-
-export interface ChaincodePolicy {
-  identities: Array<ChaincodePolicyIdentity>;
-  policy: ChaincodePolicySignedBy;
-}
-
+// Types
 export interface ChaincodeCall {
   isQuery: boolean;
   initiatorUsername: string;
@@ -58,61 +50,56 @@ export interface ChaincodeCall {
 @injectable()
 export class ChaincodeService {
   private logger = Logger.getInstance('CHAINCODE_SERVICE');
-  private fabricService: FabricClientService;
+  private fabric: FabricClientService;
   private identityData: IdentificationData;
 
   /**
    * Set instance context.
-   * @param fabricService
+   * @param fabric
    */
-  setContext(fabricService: FabricClientService, identityData: IdentificationData): ChaincodeService {
-    this.fabricService = fabricService;
+  setContext(fabric: FabricClientService, identityData: IdentificationData): ChaincodeService {
+    this.fabric = fabric;
     this.identityData = identityData;
-    this.fabricService.setClientMsp(identityData.mspId);
+    this.fabric.setClientMsp(identityData.mspId);
     return this;
   }
 
+  /**
+   * Parse chaincode id as chaincodeName:chaincodeVersion
+   * @param chaincodeId
+   */
   private parseChaincodeId(chaincodeId: string): Array<string> {
     const parts = chaincodeId.split(':');
     if (!parts[0]) {
       throw new InvalidArgumentException('Invalid chaincodeId');
     }
-    return parts;
+    return [parts[0], parts[1] || '0'];
   }
 
   /**
    * @param chaincodeId
    * @param chaincodePath
-   * @param chaincodeVersion
    * @param peers
    */
   async deployChaincode(chaincodeId: string, chaincodePath: string, peers: Array<string>): Promise<any> {
-    this.logger.verbose('Deploy chaincode', arguments);
+    this.logger.verbose('Deploy chaincode', chaincodeId, peers);
 
-    process.env.GOPATH = config.chaincode.goSrcPath;
-
-    if (!this.fabricService.canUseAdmin()) {
+    if (!this.fabric.canUseAdmin()) {
       throw new InvalidArgumentException('The identified user is not administrator');
     }
-
     if (!chaincodePath) {
       throw new InvalidArgumentException('Invalid chaincodePath');
     }
 
     const [ chaincodeName, chaincodeVersion ] = this.parseChaincodeId(chaincodeId);
 
-    return await this.fabricService.getClient().installChaincode({
-      targets: peers,
-      chaincodeId: chaincodeName,
-      chaincodePath,
-      chaincodeVersion: chaincodeVersion || '0'
-    });
+    return await (new ChaincodeInitiator(this.fabric, chaincodeName))
+      .deploy(peers, chaincodePath, chaincodeVersion);
   }
 
   /**
    * @param channelName
    * @param chaincodeId
-   * @param chaincodeVersion
    * @param args
    * @param peers
    * @param policy
@@ -126,41 +113,32 @@ export class ChaincodeService {
   ): Promise<any> {
     this.logger.verbose('Initiate chaincode', arguments);
 
-    if (!this.fabricService.canUseAdmin()) {
+    if (!this.fabric.canUseAdmin()) {
       throw new InvalidArgumentException('The identified user is not administrator');
     }
 
     const [ chaincodeName, chaincodeVersion ] = this.parseChaincodeId(chaincodeId);
-    const client = this.fabricService.getClient();
-    client._userContext = await this.getAdminUser();
+    const mspProvider = new MspProvider(this.fabric);
+    mspProvider.setUserContext(
+      await mspProvider.getAdminUser(this.identityData.username, this.identityData.mspId)
+    );
+    const proposalTransaction = new ProposalTransaction(this.fabric);
+    const transactionId = proposalTransaction.newTransactionId(true);
 
-    const transactionId = client.newTransactionID(true);
-    const channel = client.getChannel(channelName);
+    const resultOfProposal = await (new ChaincodeInitiator(this.fabric, chaincodeName))
+      .initiate(peers, channelName, transactionId, chaincodeVersion, args, policy);
 
-    await channel.initialize();
+    this.checkResultOfProposal(proposalTransaction, resultOfProposal);
 
-    this.logger.verbose('Send transaction proposal');
-    const resultOfProposal = await channel.sendInstantiateProposal({
-      chaincodeId: chaincodeName,
-      chaincodeVersion: chaincodeVersion || '0',
-      args: args || [],
-      txId: transactionId,
-      targets: peers,
-      'endorsement-policy': policy
-    });
-
-    const [proposalResponses, proposal] = resultOfProposal;
-
-    this.checkEndorsementPolicyOfResponse(proposalResponses);
-
-    await this.broadcastTransaction(channelName, proposalResponses, proposal);
+    const transactionBroadcaster = new TransactionBroadcaster(this.fabric, channelName);
+    return await transactionBroadcaster.broadcastTransaction(resultOfProposal);
   }
 
   /**
    * @param channelName
    */
   private async getChannel(channelName) {
-    return await this.fabricService.getClient().getChannel(channelName);
+    return await this.fabric.getClient().getChannel(channelName);
   }
 
   /**
@@ -175,113 +153,54 @@ export class ChaincodeService {
       throw new InvalidArgumentException('Invalid method');
     }
 
-    const client = this.fabricService.getClient();
-    await client.initCredentialStores();
-    const user = await client.getUserContext(callRequest.initiatorUsername, true);
-    await client.setUserContext(user);
-
     const [ chaincodeName, chaincodeVersion ] = this.parseChaincodeId(callRequest.chaincodeId);
-    const transactionId = this.fabricService.getClient().newTransactionID();
-    const channel = await this.getChannel(callRequest.channelName);
-
-    const requstData = {
-      chaincodeId: chaincodeName,
-      chaincodeVersion: chaincodeVersion || '0',
-      fcn: callRequest.method,
-      args: callRequest.args,
-      transientMap: callRequest.transientMap,
-      txId: transactionId
-    };
+    const mspProvider = new MspProvider(this.fabric);
+    await mspProvider.setUserFromStorage(callRequest.initiatorUsername);
+    const proposalTransaction = new ProposalTransaction(this.fabric);
+    const transactionId = proposalTransaction.newTransactionId(true);
+    const chaincodeCommutator = new ChaincodeCommutator(
+      this.fabric, callRequest.channelName, chaincodeName, chaincodeVersion
+    );
 
     if (callRequest.isQuery) {
-      this.logger.verbose('Query', callRequest.channelName, chaincodeName, callRequest.method, transactionId);
-      return await channel.queryByChaincode(requstData, callRequest.peers);
+      return await chaincodeCommutator.query(
+        callRequest.peers,
+        transactionId,
+        callRequest.method,
+        callRequest.args,
+        callRequest.transientMap
+      );
     }
-    this.logger.verbose('Invoke', callRequest.channelName, chaincodeName, callRequest.method, transactionId);
-    const resultOfProposal = await channel.sendTransactionProposal({
-      ...requstData,
-      targets: callRequest.peers
-    });
 
+    const resultOfProposal = await chaincodeCommutator.invoke(
+      callRequest.peers,
+      transactionId,
+      callRequest.method,
+      callRequest.args,
+      callRequest.transientMap
+    );
+
+    this.checkResultOfProposal(proposalTransaction, resultOfProposal);
+
+    if (callRequest.commitTransaction) {
+      const transactionBroadcaster = new TransactionBroadcaster(this.fabric, callRequest.channelName);
+      await transactionBroadcaster.broadcastTransaction(resultOfProposal);
+    }
+
+    return resultOfProposal[1];
+  }
+
+  /**
+   * Check proposal result
+   * @param proposalTransaction
+   * @param resultOfProposal
+   */
+  private checkResultOfProposal(proposalTransaction: ProposalTransaction, resultOfProposal: any) {
     if (!resultOfProposal) {
       throw new InvalidEndorsementException('Result of proposal is empty');
     }
-
-    const [proposalResponses, proposal] = resultOfProposal;
-
-    this.checkEndorsementPolicyOfResponse(proposalResponses);
-
-    if (callRequest.commitTransaction) {
-      await this.broadcastTransaction(callRequest.channelName, proposalResponses, proposal);
+    if (!proposalTransaction.checkEndorsementPolicyOfResponse(resultOfProposal)) {
+      throw new InvalidEndorsementException('Endorsement policy is not satisfied');
     }
-
-    return proposal;
-  }
-
-  /**
-   * @param proposalResponses
-   */
-  checkEndorsementPolicyOfResponse(proposalResponses: any) {
-    let endorsementSatisfied = true;
-
-    this.logger.verbose('Check endorsement policy in the response');
-
-    for (let i in proposalResponses) {
-      let result = false;
-      if (
-        proposalResponses &&
-        proposalResponses[i].response &&
-        proposalResponses[i].response.status === 200
-      ) {
-        result = true;
-      }
-      endorsementSatisfied = endorsementSatisfied && result;
-    }
-
-    if (!endorsementSatisfied) {
-      this.logger.error('Endorsement policy is not satisfied');
-      throw new InvalidEndorsementException('Chaincode call failed');
-    }
-  }
-
-  /**
-   * @param channelName
-   * @param proposalResponses
-   * @param proposal
-   */
-  async broadcastTransaction(channelName: string, proposalResponses: any, proposal: any) {
-    this.logger.verbose('Send transaction to orderer');
-
-    const channel = await this.getChannel(channelName);
-
-    const broadcastResult = await channel.sendTransaction({
-      proposalResponses,
-      proposal
-    });
-
-    if (!broadcastResult || broadcastResult.status !== 'SUCCESS') {
-      this.logger.error('Failed to broadcast a transaction by orderer');
-      throw new BroadcastingException('Broadcast failed');
-    }
-  }
-
-  private async getAdminUser(): User {
-    const client = this.fabricService.getClient();
-    if (
-      !client._adminSigningIdentity ||
-      !client._adminSigningIdentity._certificate ||
-      !client._adminSigningIdentity._signer ||
-      !client._adminSigningIdentity._signer.key
-    ) {
-      throw new NotFoundException('Administrator not found');
-    }
-
-    const user = new User(this.identityData.username);
-    await user.setEnrollment(
-      client._adminSigningIdentity._signer._key,
-      client._adminSigningIdentity._certificate,
-      this.identityData.mspId
-    );
-    return user;
   }
 }

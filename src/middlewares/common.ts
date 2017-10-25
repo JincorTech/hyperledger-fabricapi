@@ -8,9 +8,8 @@ import {
     AuthenticationServiceType,
     BearerTokenService,
     BearerTokenServiceType,
-    IdentificationData,
     IdentificationService,
-    IdentificationServiceType,
+    IdentificationServiceType
 } from '../services/identify.service';
 import { responseWithError } from '../helpers/responses';
 import { INTERNAL_SERVER_ERROR, UNAUTHORIZED } from 'http-status';
@@ -21,13 +20,6 @@ export const AuthMiddlewareType = Symbol('AuthMiddlewareType');
 // Exceptions
 class NotAuthorizedException extends Error { }
 
-// Authentication Request Interface
-interface AuthRequest extends Request {
-  token: string;
-  tokenDecoded: any;
-  identification: IdentificationData;
-}
-
 /**
  * Authentication middleware.
  */
@@ -36,7 +28,6 @@ export class AuthMiddleware {
   private expressBearer;
   constructor(
     @inject(AuthenticationServiceType) private authenticationService: AuthenticationService,
-    @inject(BearerTokenServiceType) private bearerTokenService: BearerTokenService,
     @inject(IdentificationServiceType) private identService: IdentificationService
   ) {
     this.expressBearer = expressBearerToken();
@@ -49,13 +40,13 @@ export class AuthMiddleware {
    * @param res Response
    * @param next NextFunction
    */
-  async execute(req: AuthRequest, res: Response, next: NextFunction) {
+  async execute(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     this.expressBearer(req, res, async() => {
       try {
-        if (!await this.authenticationService.validate(req.token)) {
+        req.tokenDecoded = await this.authenticationService.validate(req.token);
+        if (req.tokenDecoded === null) {
           return responseWithError(res, UNAUTHORIZED, { error: 'Not Authorized' });
         }
-        req.tokenDecoded = this.bearerTokenService.decode(req.token);
         req.identification = await this.identService.getByUsername(req.tokenDecoded.username);
         next();
       } catch (error) {

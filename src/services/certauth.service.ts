@@ -3,8 +3,7 @@ import * as User from 'fabric-client/lib/User.js';
 import { injectable, inject } from 'inversify';
 
 import { Logger } from '../logger';
-import { IdentificationData } from './identify.service';
-import { FabricClientService } from './fabric.service';
+import { FabricClientService } from './fabric';
 
 // IoC
 export const CertificateAuthorityServiceType = Symbol(
@@ -16,7 +15,7 @@ export class CertificateAuthorityException extends Error {}
 export class InvalidArgumentException extends CertificateAuthorityException {}
 export class NotFoundException extends CertificateAuthorityException {}
 
-// types
+// Types
 /**
  * Attribute passed to the certificate as OID 1.2.3.4.5.6.7.8.1
  */
@@ -171,7 +170,7 @@ export class CertificateAuthorityService {
   /**
    * Register a new user in the CA for subsequence cert. enroll.
    *
-   * @param registerarUsername
+   * @param registrarUsername
    * @param role
    * @param username
    * @param password
@@ -179,7 +178,7 @@ export class CertificateAuthorityService {
    * @param attrs
    */
   async register(
-    registerarUsername: string,
+    registrarUsername: string,
     role: string,
     username: string,
     password: string,
@@ -188,8 +187,8 @@ export class CertificateAuthorityService {
   ): Promise<string> {
     this.logger.verbose('Register new user %s', username);
 
-    if (!registerarUsername) {
-      throw new InvalidArgumentException('Invalid registerarUsername');
+    if (!registrarUsername) {
+      throw new InvalidArgumentException('Invalid registrarUsername');
     }
     if (!role) {
       throw new InvalidArgumentException('Invalid role');
@@ -209,9 +208,9 @@ export class CertificateAuthorityService {
     const caClient = await this.getCa();
     const client = this.fabricService.getClient();
 
-    const user = await this.loadFromStore(registerarUsername);
+    const user = await this.loadFromStore(registrarUsername);
     if (!user || !user.isEnrolled()) {
-      throw new NotFoundException('Registerar user not found in the storage');
+      throw new NotFoundException('Registrar user not found in the storage');
     }
 
     this.logger.verbose('Call to register %s', username);

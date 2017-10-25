@@ -3,7 +3,7 @@ import { inject, injectable } from 'inversify';
 import { controller, httpDelete, httpPost } from 'inversify-express-utils';
 import 'reflect-metadata';
 
-import { FabricClientService } from '../services/fabric.service';
+import { FabricClientService } from '../services/fabric';
 import { ChaincodeServiceType, ChaincodeService } from '../services/chaincode.service';
 import { responseAsUnbehaviorError } from '../helpers/responses';
 
@@ -21,8 +21,8 @@ export class ChannelController {
   ) {
   }
 
-  private setChaincodeServiceContext(req: Request) {
-    this.chaincodeService.setContext(FabricClientService.createFromRequest(req), req['identification']);
+  private setChaincodeServiceContext(req: AuthenticatedRequest) {
+    this.chaincodeService.setContext(new FabricClientService(req.identification), req.identification);
   }
 
   @httpPost(
@@ -30,7 +30,7 @@ export class ChannelController {
     'ChannelInitiateChaincodeRequestValidator'
   )
   async initiateChaincode(
-    req: Request,
+    req: AuthenticatedRequest,
     res: Response
   ): Promise<void> {
     try {
@@ -51,7 +51,7 @@ export class ChannelController {
     }
   }
 
-  private async callChaincode(req: Request, res: Response, isQuery: boolean) {
+  private async callChaincode(req: AuthenticatedRequest, res: Response, isQuery: boolean) {
     try {
       this.setChaincodeServiceContext(req);
 
@@ -85,7 +85,7 @@ export class ChannelController {
     'ChannelCallChaincodeRequestValidator'
   )
   async invokeChaincode(
-    req: Request,
+    req: AuthenticatedRequest,
     res: Response
   ): Promise<void> {
     await this.callChaincode(req, res, false);
@@ -96,7 +96,7 @@ export class ChannelController {
     'ChannelCallChaincodeRequestValidator'
   )
   async queryChaincode(
-    req: Request,
+    req: AuthenticatedRequest,
     res: Response
   ): Promise<void> {
     await this.callChaincode(req, res, true);
