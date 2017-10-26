@@ -17,7 +17,7 @@ export class ProposalTransaction {
    * Create new transaction id
    * @param isAdminInitiator
    */
-  newTransactionId(isAdminInitiator: boolean = false) {
+  newTransaction(isAdminInitiator: boolean = false) {
     return this.fabric.getClient().newTransactionID(isAdminInitiator);
   }
 
@@ -30,12 +30,12 @@ export class ProposalTransaction {
 
     const [proposalResponses, proposal] = proposalResultResponses;
 
-    if (Array.isArray(proposalResponses)) {
+    if (!proposalResponses.length) {
       return false;
     }
 
     const notSatisfiedEndorsments = proposalResponses.filter(
-      (item) => item.response && item.response.status === 200
+      (item) => !item.response || item.response.status !== 200
     );
 
     if (notSatisfiedEndorsments.length > 0) {
@@ -65,13 +65,13 @@ export class TransactionBroadcaster {
 
     this.logger.verbose('Send transaction to orderer');
 
-    const broadcastResult = (await this.fabric.getChannel(this.channelName)).sendTransaction({
+    const broadcastResult = await (await this.fabric.getChannel(this.channelName)).sendTransaction({
       proposalResponses,
       proposal
     });
 
     if (!broadcastResult || broadcastResult.status !== 'SUCCESS') {
-      this.logger.error('Failed to broadcast a transaction by orderer');
+      this.logger.error('Failed to broadcast a transaction by orderer', broadcastResult);
       throw new TransactionBroadcasterException('Broadcast failed');
     }
   }

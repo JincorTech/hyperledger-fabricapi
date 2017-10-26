@@ -45,7 +45,9 @@ export class ChannelController {
       );
 
       // @TODO: add more verbose information
-      res.json(result);
+      res.json({
+        isInitiated: !!result
+      });
     } catch (error) {
       responseAsUnbehaviorError(res, error);
     }
@@ -58,7 +60,7 @@ export class ChannelController {
       const result = await this.chaincodeService.callChaincode({
         channelName: req.params.channelname,
         isQuery,
-        initiatorUsername: req.body.username,
+        initiatorUsername: req.body.initiatorUsername,
         chaincodeId: req.params.chaincodeid,
         method: req.body.method,
         args: req.body.args,

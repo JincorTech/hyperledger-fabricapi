@@ -53,7 +53,7 @@ export class ChaincodeInitiator {
     chaincodePath: string,
     chaincodeVersion: string
   ) {
-    this.logger.verbose('Deploy');
+    this.logger.verbose('Deploy', chaincodePath, chaincodeVersion);
     process.env.GOPATH = config.chaincode.goSrcPath;
     return await this.fabric.getClient().installChaincode({
       targets: peers,
@@ -66,17 +66,17 @@ export class ChaincodeInitiator {
   async initiate(
     peers: Array<string>,
     channelName: string,
-    transactionId: any,
+    transaction: any,
     chaincodeVersion: string,
     args: Array<string>,
     policy?: ChaincodePolicy
   ) {
-    this.logger.verbose('Initiate');
+    this.logger.verbose('Initiate', channelName, this.chaincodeName, chaincodeVersion);
     return (await this.fabric.getChannel(channelName)).sendInstantiateProposal({
       chaincodeId: this.chaincodeName,
       chaincodeVersion: chaincodeVersion,
       args: args || [],
-      txId: transactionId,
+      txId: transaction,
       targets: peers,
       'endorsement-policy': policy
     });
@@ -98,37 +98,37 @@ export class ChaincodeCommutator {
 
   async invoke(
     peers: Array<string>,
-    transactionId: any,
+    transaction: any,
     method: string,
     args: Array<string>,
     transientMap: TransientMap
   ) {
-    this.logger.verbose('Invoke', this.channelName, this.chaincodeName, method, transactionId);
+    this.logger.verbose('Invoke', this.channelName, this.chaincodeName, method, transaction);
     return (await this.fabric.getChannel(this.channelName)).sendTransactionProposal({
       chaincodeId: this.chaincodeName,
       chaincodeVersion: this.chaincodeVersion,
       fcn: method,
       args: args,
       transientMap: transientMap,
-      txId: transactionId
+      txId: transaction
     }, peers);
   }
 
   async query(
     peers: Array<string>,
-    transactionId: any,
+    transaction: any,
     method: string,
     args: Array<string>,
     transientMap: TransientMap
   ) {
-    this.logger.verbose('Query', this.channelName, this.chaincodeName, method, transactionId);
+    this.logger.verbose('Query', this.channelName, this.chaincodeName, method, transaction);
     return (await this.fabric.getChannel(this.channelName)).queryByChaincode({
       chaincodeId: this.chaincodeName,
       chaincodeVersion: this.chaincodeVersion,
       fcn: method,
       args: args,
       transientMap: transientMap,
-      txId: transactionId
+      txId: transaction
     }, peers);
   }
 }

@@ -26,6 +26,7 @@ export class FabricClientService {
     this.isAdmin = identityData.role === 'admin';
     this.mspId = identityData.mspId;
     this.client = FabricClient.loadFromConfig(identityData.networkConfigFile);
+    FabricClient.setLogger(this.logger);
   }
 
   /**
@@ -60,7 +61,7 @@ export class FabricClientService {
   async getChannel(channelName: string): Promise<any> {
     this.logger.verbose('Get %s channel', channelName);
     const channel = await this.getClient().getChannel(channelName);
-    await channel.initialize();
+    // await channel.initialize();
     return channel;
   }
 }
@@ -107,11 +108,12 @@ export class MspProvider {
   async getAdminUser(username: string, mspId: string): User {
     this.logger.verbose('Get admin %s user for %s', username, mspId);
     const client = this.fabric.getClient();
+
     if (
       !client._adminSigningIdentity ||
       !client._adminSigningIdentity._certificate ||
       !client._adminSigningIdentity._signer ||
-      !client._adminSigningIdentity._signer.key
+      !client._adminSigningIdentity._signer._key
     ) {
       return null;
     }

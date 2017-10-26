@@ -1,3 +1,4 @@
+import { EventHub } from './fabric/event.service';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as User from 'fabric-client/lib/User.js';
@@ -98,6 +99,36 @@ export class ChaincodeService {
   }
 
   /**
+   * Broadcast and wait the event or timeout.
+   */
+  private async broadcastTransaction(channelName: string, peers: Array<string>, resultOfProposal: any, transaction: any) {
+    const transactionBroadcaster = new TransactionBroadcaster(this.fabric, channelName);
+
+    let result = false;
+    let eventPromise = new Promise((resolve, reject) => {
+      const eventHub = new EventHub(this.fabric, peers[0]);
+      const transSubs = eventHub.addForTransaction(transaction);
+
+      transSubs.onEvent((eventData) => {
+        resolve();
+        result = eventData.code === 'VALID';
+        return false;
+      },
+        () => { reject('Transaction event timeout'); }
+      );
+
+      eventHub.wait().then(
+        () => { resolve(); },
+        () => { reject(); }
+      );
+    });
+
+    await Promise.all([transactionBroadcaster.broadcastTransaction(resultOfProposal), eventPromise]);
+
+    return result;
+  }
+
+  /**
    * @param channelName
    * @param chaincodeId
    * @param args
@@ -123,15 +154,14 @@ export class ChaincodeService {
       await mspProvider.getAdminUser(this.identityData.username, this.identityData.mspId)
     );
     const proposalTransaction = new ProposalTransaction(this.fabric);
-    const transactionId = proposalTransaction.newTransactionId(true);
+    const transaction = proposalTransaction.newTransaction(true);
 
     const resultOfProposal = await (new ChaincodeInitiator(this.fabric, chaincodeName))
-      .initiate(peers, channelName, transactionId, chaincodeVersion, args, policy);
+      .initiate(peers, channelName, transaction, chaincodeVersion, args, policy);
 
     this.checkResultOfProposal(proposalTransaction, resultOfProposal);
 
-    const transactionBroadcaster = new TransactionBroadcaster(this.fabric, channelName);
-    return await transactionBroadcaster.broadcastTransaction(resultOfProposal);
+    return await this.broadcastTransaction(channelName, peers, resultOfProposal, transaction);
   }
 
   /**
@@ -157,7 +187,7 @@ export class ChaincodeService {
     const mspProvider = new MspProvider(this.fabric);
     await mspProvider.setUserFromStorage(callRequest.initiatorUsername);
     const proposalTransaction = new ProposalTransaction(this.fabric);
-    const transactionId = proposalTransaction.newTransactionId(true);
+    const transaction = proposalTransaction.newTransaction();
     const chaincodeCommutator = new ChaincodeCommutator(
       this.fabric, callRequest.channelName, chaincodeName, chaincodeVersion
     );
@@ -165,7 +195,7 @@ export class ChaincodeService {
     if (callRequest.isQuery) {
       return await chaincodeCommutator.query(
         callRequest.peers,
-        transactionId,
+        transaction,
         callRequest.method,
         callRequest.args,
         callRequest.transientMap
@@ -174,7 +204,7 @@ export class ChaincodeService {
 
     const resultOfProposal = await chaincodeCommutator.invoke(
       callRequest.peers,
-      transactionId,
+      transaction,
       callRequest.method,
       callRequest.args,
       callRequest.transientMap
@@ -183,8 +213,7 @@ export class ChaincodeService {
     this.checkResultOfProposal(proposalTransaction, resultOfProposal);
 
     if (callRequest.commitTransaction) {
-      const transactionBroadcaster = new TransactionBroadcaster(this.fabric, callRequest.channelName);
-      await transactionBroadcaster.broadcastTransaction(resultOfProposal);
+      return await this.broadcastTransaction(callRequest.channelName, callRequest.peers, resultOfProposal, transaction);
     }
 
     return resultOfProposal[1];

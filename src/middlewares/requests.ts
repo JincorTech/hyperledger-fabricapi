@@ -63,7 +63,7 @@ export function certAuthRegisterRequestValidator(req: Request, res: Response, ne
 const jsonSchemeChannelDeployChaincodeRequest = Joi.object().keys({
   id: Joi.string().empty().required(),
   path: Joi.string().empty().required(),
-  peers: Joi.array().items(Joi.string()).unique().required()
+  peers: Joi.array().items(Joi.string()).min(1).unique().required()
 });
 
 const jsonRecursiveSchemeChannelPolicy = Joi.object().pattern(
@@ -76,7 +76,7 @@ const jsonRecursiveSchemeChannelPolicy = Joi.object().pattern(
 
 const jsonSchemeChannelInitiateChaincodeRequest = Joi.object().keys({
   args: Joi.array().required(),
-  peers: Joi.array().items(Joi.string()).unique().required(),
+  peers: Joi.array().items(Joi.string()).min(1).unique().required(),
   policy: Joi.object().keys({
     identities: Joi.array().items(
       Joi.object().keys({
@@ -94,7 +94,7 @@ const jsonSchemeChannelCallChaincodeRequest = Joi.object().keys({
   initiatorUsername: Joi.string().empty().required(),
   method: Joi.string().empty().required(),
   args: Joi.array().items(Joi.string()).required(),
-  peers: Joi.array().items(Joi.string()).unique().required(),
+  peers: Joi.array().items(Joi.string()).min(1).unique().required(),
   transientMap: Joi.object().pattern(/^/, Joi.string()),
   commitTransaction: Joi.boolean()
 });
