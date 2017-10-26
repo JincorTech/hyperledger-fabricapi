@@ -6,7 +6,7 @@ import { MspProvider } from '../../fabric/msp.service';
 import { NotFoundException } from './exceptions';
 
 /**
- * CertificateAuthorityClientService.
+ * FabricCaClientService.
  */
 export class FabricCaClientService {
   protected logger = Logger.getInstance('CERTIFICATE_AUTHORITY_CLIENT');
@@ -19,15 +19,20 @@ export class FabricCaClientService {
     fabricService.setClientMsp(identityData.mspId);
   }
 
+  /**
+   * Get fabric wrapper service.
+   */
   getFabricClient(): FabricClientService {
     return this.fabricService;
   }
 
-  async getCaClient(): FabricCaClient {
+  /**
+   * Get native FabricCA client.
+   */
+  getCaClient(): FabricCaClient {
     const caClient = this.fabricService.getClient().getCertificateAuthority();
     if (!caClient) {
-      this.logger.error('CA not found');
-      throw new NotFoundException('CA not found');
+      throw new NotFoundException('CA not found in network configuration');
     }
 
     return caClient;

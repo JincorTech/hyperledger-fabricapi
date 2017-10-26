@@ -1,3 +1,4 @@
+import { setTimeout } from 'timers';
 import { Logger } from '../../logger';
 import { FabricClientService } from './client.service';
 import { AbstractSubscription } from './event/subscription';
@@ -62,7 +63,7 @@ export class EventHub {
    * @param subscription
    */
   removeSubscriber(subscription: AbstractSubscription) {
-    this.logger.verbose('Removed subscriber', this.subscribers.length);
+    this.logger.verbose('Remove subscriber', this.subscribers.length);
     this.subscribers.splice(this.subscribers.indexOf(subscription), 1);
     if (!this.subscribers.length && !this.isShutdown) {
       this.logger.verbose('Disconnect');

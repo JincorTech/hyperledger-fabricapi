@@ -6,10 +6,10 @@ import { FabricClientService } from '../client.service';
 import { ChaincodePolicy } from './interfaces';
 
 /**
- * ChaincodeInitiator
+ * ChaincodeInstaller
  */
-export class ChaincodeInitiator {
-  private logger = Logger.getInstance('CHAINCODE_INITIATOR');
+export class ChaincodeInstaller {
+  private logger = Logger.getInstance('CHAINCODE_INSTALLER');
 
   constructor(private fabric: FabricClientService, private chaincodeName: string) {
   }
@@ -54,6 +54,34 @@ export class ChaincodeInitiator {
   ) {
     this.logger.verbose('Initiate', channelName, this.chaincodeName, chaincodeVersion);
     return (await this.fabric.getChannel(channelName)).sendInstantiateProposal({
+      chaincodeId: this.chaincodeName,
+      chaincodeVersion: chaincodeVersion,
+      args: args || [],
+      txId: transaction,
+      targets: peers,
+      'endorsement-policy': policy
+    });
+  }
+
+  /**
+   * Upgrade chaincode on a channel
+   * @param peers
+   * @param channelName
+   * @param transaction
+   * @param chaincodeVersion
+   * @param args
+   * @param policy
+   */
+  async upgrade(
+    peers: Array<string>,
+    channelName: string,
+    transaction: any,
+    chaincodeVersion: string,
+    args: Array<string>,
+    policy?: ChaincodePolicy
+  ) {
+    this.logger.verbose('Upgrade', channelName, this.chaincodeName, chaincodeVersion);
+    return (await this.fabric.getChannel(channelName)).sendUpgradeProposal({
       chaincodeId: this.chaincodeName,
       chaincodeVersion: chaincodeVersion,
       args: args || [],

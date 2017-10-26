@@ -16,7 +16,7 @@ export const CertificateAuthorityApplicationType = Symbol(
 );
 
 /**
- * CertificateAuthorityApplication to work with certificate enrollment.
+ * Certificate authority application.
  */
 @injectable()
 export class CertificateAuthorityApplication {

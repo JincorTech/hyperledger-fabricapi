@@ -66,7 +66,7 @@ export class UserRegistrarService {
       }
     }
 
-    this.logger.verbose('Call to register %s', username);
+    this.logger.verbose('Call to register', role, username, affiliation);
     const userSecret = await this.fabricCaClient.getCaClient().register(
       {
         enrollmentID: username,

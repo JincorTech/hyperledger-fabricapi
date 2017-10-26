@@ -25,28 +25,23 @@ export class ChannelController {
     this.chaincodeService.setContext(new FabricClientService(req.identification), req.identification);
   }
 
-  @httpPost(
-    '/chaincodes/:chaincodeid/actions/initiate',
-    'ChannelInitiateChaincodeRequestValidator'
-  )
-  async initiateChaincode(
-    req: AuthenticatedRequest,
-    res: Response
-  ): Promise<void> {
+  private async installChaincode(req: AuthenticatedRequest, res: Response, isUpgrade: boolean) {
     try {
       this.setChaincodeServiceContext(req);
 
-      const result = await this.chaincodeService.initiateChaincode(
-        req.params.channelname,
-        req.params.chaincodeid,
-        req.body.args,
-        req.body.peers,
-        req.body.policy
-      );
+      const result = await this.chaincodeService.installChaincode({
+        isUpgrade,
+        channelName: req.params.channelname,
+        chaincodeId: req.params.chaincodeid,
+        args: req.body.args,
+        peers: req.body.peers,
+        eventPeer: req.body.eventPeer,
+        policy: req.body.policy
+      });
 
       // @TODO: add more verbose information
       res.json({
-        isInitiated: !!result
+        isInstalled: !!result
       });
     } catch (error) {
       responseAsUnbehaviorError(res, error);
@@ -66,6 +61,7 @@ export class ChannelController {
         args: req.body.args,
         transientMap: req.body.transientMap,
         peers: req.body.peers,
+        eventPeer: req.body.eventPeer,
         commitTransaction: req.body.commitTransaction
       });
 
@@ -80,6 +76,28 @@ export class ChannelController {
     } catch (error) {
       responseAsUnbehaviorError(res, error);
     }
+  }
+
+  @httpPost(
+    '/chaincodes/:chaincodeid/actions/initiate',
+    'ChannelInstallChaincodeRequestValidator'
+  )
+  async initiateChaincode(
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
+    await this.installChaincode(req, res, false);
+  }
+
+  @httpPost(
+    '/chaincodes/:chaincodeid/actions/upgrade',
+    'ChannelInstallChaincodeRequestValidator'
+  )
+  async upgradeChaincode(
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
+    await this.installChaincode(req, res, true);
   }
 
   @httpPost(

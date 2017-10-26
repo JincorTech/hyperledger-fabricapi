@@ -2,20 +2,21 @@ import { TimeoutPromise } from '../../../helpers/timer';
 import { Logger } from '../../../logger';
 
 type CallbackMethod<T, R> = (arg: T) => R;
+type CallbackMethodWeak<T, R> = (arg?: T) => R;
 
 /**
  * AbstractSubscription subscription
  */
 export abstract class AbstractSubscription {
   protected callback: CallbackMethod<any, boolean> = null;
-  protected timeoutCallback: CallbackMethod<void, void> = null;
+  protected timeoutCallback: CallbackMethodWeak<void, void> = null;
   protected timer: TimeoutPromise;
 
   /**
    * Register event listener
    * @param callback
    */
-  onEvent(callback: CallbackMethod<any, boolean>, timeoutCallback: CallbackMethod<void, void> = null) {
+  onEvent(callback: CallbackMethod<any, boolean>, timeoutCallback: CallbackMethodWeak<void, void> = null) {
     this.callback = callback;
     this.timeoutCallback = timeoutCallback;
   }
@@ -36,7 +37,7 @@ export abstract class AbstractSubscription {
    */
   protected notifyTimeout() {
     if (this.notifyTimeout) {
-      this.notifyTimeout();
+      this.timeoutCallback();
     }
   }
 

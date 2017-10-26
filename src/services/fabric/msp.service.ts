@@ -2,6 +2,7 @@ import * as User from 'fabric-client/lib/User.js';
 import * as FabricClient from 'fabric-client/lib/Client.js';
 
 import { Logger } from '../../logger';
+import { MspProviderException } from './exceptions';
 import { FabricClientService } from './client.service';
 
 /**
@@ -33,7 +34,6 @@ export class MspProvider {
     const client = this.fabric.getClient();
     this.logger.verbose('Get from store %s', username);
     await this.initCredStores();
-    client._userContext = null;
     return await client.getUserContext(username, true);
   }
 
@@ -53,7 +53,10 @@ export class MspProvider {
   async setUserFromStorage(username: string) {
     this.logger.verbose('Set user from storage for %s', username);
     await this.initCredStores();
-    const user = this.loadFromStore(username);
+    const user = await this.loadFromStore(username);
+    if (user === null) {
+      throw new MspProviderException(username + ' not found!');
+    }
     this.setUserContext(user);
     return user;
   }

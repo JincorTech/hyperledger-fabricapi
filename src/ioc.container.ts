@@ -58,8 +58,8 @@ container.bind<express.RequestHandler>('CertAuthRegisterRequestValidator').toCon
 container.bind<express.RequestHandler>('ChannelDeployChaincodeRequestValidator').toConstantValue(
   (req: any, res: any, next: any) => validators.channelDeployChaincodeRequest(req, res, next)
 );
-container.bind<express.RequestHandler>('ChannelInitiateChaincodeRequestValidator').toConstantValue(
-  (req: any, res: any, next: any) => validators.channelInitiateChaincodeRequest(req, res, next)
+container.bind<express.RequestHandler>('ChannelInstallChaincodeRequestValidator').toConstantValue(
+  (req: any, res: any, next: any) => validators.channelInstallChaincodeRequest(req, res, next)
 );
 container.bind<express.RequestHandler>('ChannelCallChaincodeRequestValidator').toConstantValue(
   (req: any, res: any, next: any) => validators.channelCallChaincodeRequest(req, res, next)

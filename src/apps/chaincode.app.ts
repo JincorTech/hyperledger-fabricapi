@@ -5,19 +5,19 @@ import { Logger } from '../logger';
 import { ChaincodePolicy } from '../services/fabric/chaincode/interfaces';
 import { FabricClientService } from '../services/fabric/client.service';
 import { InvalidArgumentException, InvalidEndorsementException } from './exceptions';
-import { ChaincodeInitiator } from '../services/fabric/chaincode/initiator.service';
+import { ChaincodeInstaller } from '../services/fabric/chaincode/installer.service';
 import { TransactionBroadcaster } from '../services/fabric/transaction/broadcaster.service';
 import { EventHub } from '../services/fabric/eventhub.service';
 import { MspProvider } from '../services/fabric/msp.service';
 import { ProposalTransaction } from '../services/fabric/transaction/proposal.service';
-import { ChaincodeCall } from '../services/fabric/interfaces';
+import { ChaincodeCall, ChaincodeInstall } from '../services/fabric/interfaces';
 import { ChaincodeCommutator } from '../services/fabric/chaincode/commutator.service';
 
 // IoC
 export const ChaincodeApplicationType = Symbol('ChaincodeApplicationType');
 
 /**
- * ChaincodeApplication
+ * Chaincode application.
  */
 @injectable()
 export class ChaincodeApplication {
@@ -37,6 +37,13 @@ export class ChaincodeApplication {
   }
 
   /**
+   * @param channelName
+   */
+  private async getChannel(channelName) {
+    return await this.fabric.getClient().getChannel(channelName);
+  }
+
+  /**
    * Parse chaincode id as chaincodeName:chaincodeVersion
    * @param chaincodeId
    */
@@ -46,6 +53,53 @@ export class ChaincodeApplication {
       throw new InvalidArgumentException('Invalid chaincodeId');
     }
     return [parts[0], parts[1] || '0'];
+  }
+
+  /**
+   * Wait transaction event or timeout
+   * @param peerName
+   * @param transaction
+   */
+  private async waitPeerTransactionEvent(peerName: string, transaction: any) {
+    if (!peerName) {
+      return false;
+    }
+    return await new Promise((resolve, reject) => {
+      let result = false;
+      const eventHub = new EventHub(this.fabric, peerName);
+      const transSubs = eventHub.addForTransaction(transaction);
+
+      transSubs.onEvent((eventData) => {
+        result = eventData.code === 'VALID'; // VALID will returned by peer if success
+        this.logger.verbose('Catch transaction event result', result, transaction.getTransactionID());
+        resolve(result);
+        return false;
+      },
+        () => { reject('Transaction event timeout ' + transaction.getTransactionID()); }
+      );
+
+      eventHub.wait().then(() => { resolve(result); });
+    });
+  }
+
+  /**
+   * Broadcast and wait the event or timeout.
+   */
+  private async broadcastTransaction(
+    channelName: string,
+    peers: Array<string>,
+    eventPeer: string,
+    resultOfProposal: any,
+    transaction: any
+  ) {
+    const transactionBroadcaster = new TransactionBroadcaster(this.fabric, channelName);
+
+    const [broadcastResult, transactionEventResult] = await Promise.all([
+      transactionBroadcaster.broadcastTransaction(resultOfProposal),
+      this.waitPeerTransactionEvent(eventPeer || peers[0], transaction)
+    ]);
+
+    return transactionEventResult;
   }
 
   /**
@@ -65,81 +119,66 @@ export class ChaincodeApplication {
 
     const [ chaincodeName, chaincodeVersion ] = this.parseChaincodeId(chaincodeId);
 
-    return await (new ChaincodeInitiator(this.fabric, chaincodeName))
+    return await (new ChaincodeInstaller(this.fabric, chaincodeName))
       .deploy(peers, chaincodePath, chaincodeVersion);
   }
 
   /**
-   * Broadcast and wait the event or timeout.
-   */
-  private async broadcastTransaction(channelName: string, peers: Array<string>, resultOfProposal: any, transaction: any) {
-    const transactionBroadcaster = new TransactionBroadcaster(this.fabric, channelName);
-
-    let result = false;
-    let eventPromise = new Promise((resolve, reject) => {
-      const eventHub = new EventHub(this.fabric, peers[0]);
-      const transSubs = eventHub.addForTransaction(transaction);
-
-      transSubs.onEvent((eventData) => {
-        resolve();
-        result = eventData.code === 'VALID';
-        return false;
-      },
-        () => { reject('Transaction event timeout'); }
-      );
-
-      eventHub.wait().then(
-        () => { resolve(); },
-        () => { reject(); }
-      );
-    });
-
-    await Promise.all([transactionBroadcaster.broadcastTransaction(resultOfProposal), eventPromise]);
-
-    return result;
-  }
-
-  /**
+   * @param isUpgrade
    * @param channelName
    * @param chaincodeId
    * @param args
    * @param peers
    * @param policy
    */
-  async initiateChaincode(
-    channelName: string,
-    chaincodeId: string,
-    args: Array<string>,
-    peers: Array<string>,
-    policy: ChaincodePolicy|null = null
+  async installChaincode(
+    installRequest: ChaincodeInstall
   ): Promise<any> {
-    this.logger.verbose('Initiate chaincode', arguments);
+    this.logger.verbose('Upgrade chaincode', arguments);
 
     if (!this.fabric.canUseAdmin()) {
       throw new InvalidArgumentException('The identified user is not administrator');
     }
 
-    const [ chaincodeName, chaincodeVersion ] = this.parseChaincodeId(chaincodeId);
+    const [ chaincodeName, chaincodeVersion ] = this.parseChaincodeId(installRequest.chaincodeId);
     const mspProvider = new MspProvider(this.fabric);
     mspProvider.setUserContext(
       await mspProvider.getAdminUser(this.identityData.username, this.identityData.mspId)
     );
     const proposalTransaction = new ProposalTransaction(this.fabric);
     const transaction = proposalTransaction.newTransaction(true);
+    const chaincodeInstaller = new ChaincodeInstaller(this.fabric, chaincodeName);
 
-    const resultOfProposal = await (new ChaincodeInitiator(this.fabric, chaincodeName))
-      .initiate(peers, channelName, transaction, chaincodeVersion, args, policy);
+    let resultOfProposal;
+    if (!installRequest.isUpgrade) {
+      resultOfProposal = await chaincodeInstaller.initiate(
+        installRequest.peers,
+        installRequest.channelName,
+        transaction,
+        chaincodeVersion,
+        installRequest.args,
+        installRequest.policy
+      );
+    } else {
+      resultOfProposal = await chaincodeInstaller.upgrade(
+        installRequest.peers,
+        installRequest.channelName,
+        transaction,
+        chaincodeVersion,
+        installRequest.args,
+        installRequest.policy
+      );
+    }
 
     this.checkResultOfProposal(proposalTransaction, resultOfProposal);
 
-    return await this.broadcastTransaction(channelName, peers, resultOfProposal, transaction);
-  }
-
-  /**
-   * @param channelName
-   */
-  private async getChannel(channelName) {
-    return await this.fabric.getClient().getChannel(channelName);
+    return await this.broadcastTransaction(
+      installRequest.channelName,
+      installRequest.peers,
+      installRequest.eventPeer,
+      resultOfProposal,
+      transaction
+    );
   }
 
   /**
@@ -160,7 +199,7 @@ export class ChaincodeApplication {
     const proposalTransaction = new ProposalTransaction(this.fabric);
     const transaction = proposalTransaction.newTransaction();
     const chaincodeCommutator = new ChaincodeCommutator(
-      this.fabric, callRequest.channelName, chaincodeName, chaincodeVersion
+      this.fabric, callRequest.channelName, chaincodeName
     );
 
     if (callRequest.isQuery) {
@@ -184,7 +223,13 @@ export class ChaincodeApplication {
     this.checkResultOfProposal(proposalTransaction, resultOfProposal);
 
     if (callRequest.commitTransaction) {
-      return await this.broadcastTransaction(callRequest.channelName, callRequest.peers, resultOfProposal, transaction);
+      return await this.broadcastTransaction(
+        callRequest.channelName,
+        callRequest.peers,
+        callRequest.eventPeer,
+        resultOfProposal,
+        transaction
+      );
     }
 
     return resultOfProposal[1];
@@ -199,8 +244,7 @@ export class ChaincodeApplication {
     if (!resultOfProposal) {
       throw new InvalidEndorsementException('Result of proposal is empty');
     }
-    if (!proposalTransaction.checkEndorsementPolicyOfResponse(resultOfProposal)) {
-      throw new InvalidEndorsementException('Endorsement policy is not satisfied');
-    }
+
+    proposalTransaction.validateProposalResponses(resultOfProposal);
   }
 }

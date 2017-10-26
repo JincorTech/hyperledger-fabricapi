@@ -74,9 +74,10 @@ const jsonRecursiveSchemeChannelPolicy = Joi.object().pattern(
   )
 ).required();
 
-const jsonSchemeChannelInitiateChaincodeRequest = Joi.object().keys({
+const jsonSchemeChannelInstallChaincodeRequest = Joi.object().keys({
   args: Joi.array().required(),
   peers: Joi.array().items(Joi.string()).min(1).unique().required(),
+  eventPeer: Joi.string().empty().optional(),
   policy: Joi.object().keys({
     identities: Joi.array().items(
       Joi.object().keys({
@@ -95,6 +96,7 @@ const jsonSchemeChannelCallChaincodeRequest = Joi.object().keys({
   method: Joi.string().empty().required(),
   args: Joi.array().items(Joi.string()).required(),
   peers: Joi.array().items(Joi.string()).min(1).unique().required(),
+  eventPeer: Joi.string().empty().optional(),
   transientMap: Joi.object().pattern(/^/, Joi.string()),
   commitTransaction: Joi.boolean()
 });
@@ -103,8 +105,8 @@ export function channelDeployChaincodeRequest(req: Request, res: Response, next:
   return commonFlowRequestMiddleware(jsonSchemeChannelDeployChaincodeRequest, req, res, next);
 }
 
-export function channelInitiateChaincodeRequest(req: Request, res: Response, next: NextFunction) {
-  return commonFlowRequestMiddleware(jsonSchemeChannelInitiateChaincodeRequest, req, res, next);
+export function channelInstallChaincodeRequest(req: Request, res: Response, next: NextFunction) {
+  return commonFlowRequestMiddleware(jsonSchemeChannelInstallChaincodeRequest, req, res, next);
 }
 
 export function channelCallChaincodeRequest(req: Request, res: Response, next: NextFunction) {

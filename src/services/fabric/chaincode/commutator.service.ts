@@ -12,8 +12,8 @@ export class ChaincodeCommutator {
   constructor(
     private fabric: FabricClientService,
     private channelName: string,
-    private chaincodeName: string,
-    private chaincodeVersion: string) {
+    private chaincodeName: string
+  ) {
   }
 
   /**
@@ -34,7 +34,6 @@ export class ChaincodeCommutator {
     this.logger.verbose('Invoke', this.channelName, this.chaincodeName, method, transaction);
     return (await this.fabric.getChannel(this.channelName)).sendTransactionProposal({
       chaincodeId: this.chaincodeName,
-      chaincodeVersion: this.chaincodeVersion,
       fcn: method,
       args: args,
       transientMap: transientMap,
@@ -58,13 +57,20 @@ export class ChaincodeCommutator {
     transientMap: TransientMap
   ) {
     this.logger.verbose('Query', this.channelName, this.chaincodeName, method, transaction);
-    return (await this.fabric.getChannel(this.channelName)).queryByChaincode({
+    const channel = await this.fabric.getChannel(this.channelName);
+    const responses = await channel.queryByChaincode({
       chaincodeId: this.chaincodeName,
-      chaincodeVersion: this.chaincodeVersion,
       fcn: method,
       args: args,
       transientMap: transientMap,
       txId: transaction
     }, peers);
+
+    return responses.map(element => {
+      if (element instanceof Buffer) {
+        return element.toString();
+      }
+      return element;
+    });
   }
 }

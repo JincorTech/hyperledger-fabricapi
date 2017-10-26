@@ -18,7 +18,8 @@ that was received after login to the service.
 1. `/api/cert-auths/users/actions/enroll-from [POST]`
 1. `/api/cert-auths/users/actions/register [POST]`
 1. `/api/chaincodes/actions/deploy [POST]`
-1. `/api/channels/{CHANNEL_NAME}/chaincodes/{CHAINCODE_ID}/actions/initiate [POST]`
+1. `/api/channels/{CHANNEL_NAME}/chaincodes/{CHAINCODE_ID}/actions/install [POST]`
+1. `/api/channels/{CHANNEL_NAME}/chaincodes/{CHAINCODE_ID}/actions/upgrade [POST]`
 1. `/api/channels/{CHANNEL_NAME}/chaincodes/{CHAINCODE_ID}/actions/invoke [POST]`
 1. `/api/channels/{CHANNEL_NAME}/chaincodes/{CHAINCODE_ID}/actions/query [POST]`
 
@@ -177,7 +178,8 @@ that was received after login to the service.
     + Body
 
             {
-                "args": "",
+                "args": [],
+                "eventPeer": "peer1.network.jincor.com",
                 "peers": [
                   "peer0.network.jincor.com",
                   "peer1.network.jincor.com"
@@ -187,7 +189,39 @@ that was received after login to the service.
 + Response 200 (application/json)
 
             {
-                "isInitiated": true
+                "isInstalled": true
+            }
+
+
+## Channel: Upgrade Chaincode on the Channel [/api/channels/{CHANNEL_NAME}/chaincodes/{CHAINCODE_ID}/actions/upgrade]
+
++ Parameters
+    + CHANNEL_NAME (string) - existing channel name in a HLF.
+    + CHAINCODE_ID (string) - deployed chaincode (format chaincode:version).
+
+### Upgrade Chaincode on the Channel [POST]
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer {JWT_TOKEN}
+            Accept: application/vnd.jincor+json; version=1
+
+    + Body
+
+            {
+                "args": [],
+                "eventPeer": "peer1.network.jincor.com",
+                "peers": [
+                  "peer0.network.jincor.com",
+                  "peer1.network.jincor.com"
+                ]
+            }
+
++ Response 200 (application/json)
+
+            {
+                "isInstalled": true
             }
 
 
@@ -215,6 +249,7 @@ that was received after login to the service.
                   "secretPinCode": "123456"
                 },
                 "commitTransaction": true,
+                "eventPeer": "peer0.network.jincor.com",
                 "peers": [
                   "peer0.network.jincor.com",
                   "peer5.network.jincor.com"

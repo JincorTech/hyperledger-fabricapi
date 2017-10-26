@@ -1,6 +1,6 @@
-import { FabricClientService } from '../client.service';
 import { Logger } from '../../../logger';
-import { TransactionBroadcasterException } from './exceptions';
+import { FabricClientService } from '../client.service';
+import { TransactionBroadcasterException, ErrorProposalResponses, EmptyProposalResponse } from './exceptions';
 
 /**
  * ProposalTransaction
@@ -20,28 +20,27 @@ export class ProposalTransaction {
   }
 
   /**
-   * Check endorsements policy
+   * Check proposal responses
    * @param proposalResultResponses
    */
-  checkEndorsementPolicyOfResponse(proposalResultResponses: any) {
-    this.logger.verbose('Check endorsement policy in the response');
+  validateProposalResponses(proposalResultResponses: any) {
+    this.logger.verbose('Check proposal responses');
 
     const [proposalResponses, proposal] = proposalResultResponses;
 
     if (!proposalResponses.length) {
-      return false;
+      this.logger.verbose('Empty proposal responses', proposalResponses);
+      throw new EmptyProposalResponse('Empty proposal responses was received');
     }
 
-    const notSatisfiedEndorsments = proposalResponses.filter(
+    const notSatisfiedProposals = proposalResponses.filter(
       (item) => !item.response || item.response.status !== 200
     );
 
-    if (notSatisfiedEndorsments.length > 0) {
-      this.logger.verbose('Not satisfied endorsments:', notSatisfiedEndorsments);
-      return false;
+    if (notSatisfiedProposals.length > 0) {
+      this.logger.verbose('Not satisfied proposals: %s', notSatisfiedProposals);
+      throw new ErrorProposalResponses(notSatisfiedProposals.join('; '));
     }
-
-    return true;
   }
 }
 
