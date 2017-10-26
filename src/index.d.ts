@@ -1,5 +1,3 @@
-/// <reference types="express"/>
-
 declare interface AuthenticatedRequest {
   params: any;
   body: any;

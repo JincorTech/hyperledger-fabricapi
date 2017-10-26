@@ -1,5 +1,5 @@
-import { inspect } from 'util';
 import * as winston from 'winston';
+
 import config from './config';
 
 export const newConsoleTransport = (name?: string) => new (winston.transports.Console)({

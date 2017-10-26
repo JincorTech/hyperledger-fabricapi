@@ -1,38 +1,38 @@
-import { interfaces as InversifyInterfaces, Container } from 'inversify';
+import { Container } from 'inversify';
 import { interfaces, TYPE } from 'inversify-express-utils';
 import * as express from 'express';
 
-import config from './config';
-
 import * as commonMiddlewares from './middlewares/common';
-import * as identify from './services/identify.service';
-import * as certauth from './services/certauth.service';
-import * as chaincode from './services/chaincode.service';
-import * as fabric from './services/fabric';
+import * as securityInterfaces from './services/security/interfaces';
+import * as token from './services/security/token.service';
+import * as identification from './services/security/identification.service';
+import * as authentication from './services/security/authentication.service';
+import * as certauth from './apps/certauth.app';
+import * as chaincode from './apps/chaincode.app';
 
 import { AuthController } from './controllers/auth.controller';
 import { ChannelController } from './controllers/channel.controller';
 import { ChaincodeController } from './controllers/chaincode.controller';
 import { CertAuthController } from './controllers/certauth.controller';
-import * as validators from './middlewares/requests';
+import * as validators from './middlewares/request.validators';
 
 let container = new Container();
 
 // services
-container.bind<identify.BearerTokenService>(identify.BearerTokenServiceType)
-  .to(identify.JwtBearerTokenService).inSingletonScope();
+container.bind<securityInterfaces.BearerTokenService>(token.BearerTokenServiceType)
+  .to(token.JwtBearerTokenService).inSingletonScope();
 
-container.bind<identify.IdentificationService>(identify.IdentificationServiceType)
-  .to(identify.FileIdentificationService).inSingletonScope();
+container.bind<securityInterfaces.IdentificationService>(identification.IdentificationServiceType)
+  .to(identification.FileIdentificationService).inSingletonScope();
 
-container.bind<identify.AuthenticationService>(identify.AuthenticationServiceType)
-  .to(identify.StandardAuthenticationService).inSingletonScope();
+container.bind<securityInterfaces.AuthenticationService>(authentication.AuthenticationServiceType)
+  .to(authentication.StandardAuthenticationService).inSingletonScope();
 
-container.bind<certauth.CertificateAuthorityService>(certauth.CertificateAuthorityServiceType)
-  .to(certauth.CertificateAuthorityService);
+container.bind<certauth.CertificateAuthorityApplication>(certauth.CertificateAuthorityApplicationType)
+  .to(certauth.CertificateAuthorityApplication);
 
-container.bind<chaincode.ChaincodeService>(chaincode.ChaincodeServiceType)
-  .to(chaincode.ChaincodeService);
+container.bind<chaincode.ChaincodeApplication>(chaincode.ChaincodeApplicationType)
+  .to(chaincode.ChaincodeApplication);
 
 // middlewares
 container.bind<commonMiddlewares.AuthMiddleware>(commonMiddlewares.AuthMiddlewareType)

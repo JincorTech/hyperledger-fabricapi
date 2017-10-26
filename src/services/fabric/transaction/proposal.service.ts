@@ -1,8 +1,6 @@
-import { FabricClientService } from './';
-import { Logger } from '../../logger';
-
-// Exceptions
-export class TransactionBroadcasterException extends Error { }
+import { FabricClientService } from '../client.service';
+import { Logger } from '../../../logger';
+import { TransactionBroadcasterException } from './exceptions';
 
 /**
  * ProposalTransaction

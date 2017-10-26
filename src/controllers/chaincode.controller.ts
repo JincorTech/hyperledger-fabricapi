@@ -3,9 +3,9 @@ import { inject, injectable } from 'inversify';
 import { controller, httpDelete, httpPost } from 'inversify-express-utils';
 import 'reflect-metadata';
 
-import { FabricClientService } from '../services/fabric';
-import { ChaincodeServiceType, ChaincodeService } from '../services/chaincode.service';
 import { responseAsUnbehaviorError } from '../helpers/responses';
+import { ChaincodeApplicationType, ChaincodeApplication } from '../apps/chaincode.app';
+import { FabricClientService } from '../services/fabric/client.service';
 
 /**
  * ChaincodeController resource
@@ -17,7 +17,7 @@ import { responseAsUnbehaviorError } from '../helpers/responses';
 )
 export class ChaincodeController {
   constructor(
-    @inject(ChaincodeServiceType) private chaincodeService: ChaincodeService
+    @inject(ChaincodeApplicationType) private chaincodeService: ChaincodeApplication
   ) {
   }
 

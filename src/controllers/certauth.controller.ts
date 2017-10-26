@@ -3,9 +3,9 @@ import { inject, injectable } from 'inversify';
 import { controller, httpDelete, httpPost } from 'inversify-express-utils';
 import 'reflect-metadata';
 
-import { FabricClientService } from '../services/fabric';
-import { CertificateAuthorityServiceType, CertificateAuthorityService } from '../services/certauth.service';
 import { responseAsUnbehaviorError } from '../helpers/responses';
+import { CertificateAuthorityApplicationType, CertificateAuthorityApplication } from '../apps/certauth.app';
+import { FabricClientService } from '../services/fabric/client.service';
 
 /**
  * CertAuthController resource
@@ -17,7 +17,7 @@ import { responseAsUnbehaviorError } from '../helpers/responses';
 )
 export class CertAuthController {
   constructor(
-    @inject(CertificateAuthorityServiceType) private certAuthService: CertificateAuthorityService
+    @inject(CertificateAuthorityApplicationType) private certAuthService: CertificateAuthorityApplication
   ) {
   }
 

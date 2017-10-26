@@ -1,12 +1,17 @@
+import { error } from 'util';
 import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { controller, httpDelete, httpPost } from 'inversify-express-utils';
 import { INTERNAL_SERVER_ERROR, UNAUTHORIZED } from 'http-status';
 import 'reflect-metadata';
 
-import { AuthenticationService, AuthenticationServiceType } from '../services/identify.service';
+import { AuthenticationServiceType } from '../services/security/authentication.service';
+import { AuthenticationService } from '../services/security/interfaces';
 import { responseAsUnbehaviorError } from '../helpers/responses';
 
+/**
+ * @internal helper interface
+ */
 interface AuthenticateAdminRequest extends Request {
   params: {
     username: string;

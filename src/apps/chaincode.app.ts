@@ -1,56 +1,27 @@
-import { EventHub } from './fabric/event.service';
-import * as fs from 'fs';
-import * as path from 'path';
-import * as User from 'fabric-client/lib/User.js';
-import * as FabricClient from 'fabric-client/lib/Client.js';
-import { injectable, inject } from 'inversify';
+import { injectable } from 'inversify';
+import 'reflect-metadata';
 
-import config from '../config';
 import { Logger } from '../logger';
-import {
-  FabricClientService,
-  MspProvider
-} from './fabric';
-import {
-  ChaincodeCommutator,
-  ChaincodeInitiator,
-  TransientMap,
-  ChaincodePolicy
-} from './fabric/chaincode.service';
-import {
-  TransactionBroadcaster,
-  ProposalTransaction
-} from './fabric/transaction.service';
+import { ChaincodePolicy } from '../services/fabric/chaincode/interfaces';
+import { FabricClientService } from '../services/fabric/client.service';
+import { InvalidArgumentException, InvalidEndorsementException } from './exceptions';
+import { ChaincodeInitiator } from '../services/fabric/chaincode/initiator.service';
+import { TransactionBroadcaster } from '../services/fabric/transaction/broadcaster.service';
+import { EventHub } from '../services/fabric/eventhub.service';
+import { MspProvider } from '../services/fabric/msp.service';
+import { ProposalTransaction } from '../services/fabric/transaction/proposal.service';
+import { ChaincodeCall } from '../services/fabric/interfaces';
+import { ChaincodeCommutator } from '../services/fabric/chaincode/commutator.service';
 
 // IoC
-export const ChaincodeServiceType = Symbol('ChaincodeServiceType');
-
-// Exceptions
-export class ChaincodeServiceException extends Error {}
-export class NotFoundException extends ChaincodeServiceException { }
-export class InvalidArgumentException extends ChaincodeServiceException { }
-export class InvalidEndorsementException extends ChaincodeServiceException { }
-export class BroadcastingException extends ChaincodeServiceException { }
-
-// Types
-export interface ChaincodeCall {
-  isQuery: boolean;
-  initiatorUsername: string;
-  channelName: string;
-  chaincodeId: string;
-  method: string;
-  args: Array<string>;
-  peers: Array<string>;
-  transientMap?: TransientMap;
-  commitTransaction?: boolean;
-}
+export const ChaincodeApplicationType = Symbol('ChaincodeApplicationType');
 
 /**
- * ChaincodeService
+ * ChaincodeApplication
  */
 @injectable()
-export class ChaincodeService {
-  private logger = Logger.getInstance('CHAINCODE_SERVICE');
+export class ChaincodeApplication {
+  private logger = Logger.getInstance('CHAINCODE_APPLICATION');
   private fabric: FabricClientService;
   private identityData: IdentificationData;
 
@@ -58,7 +29,7 @@ export class ChaincodeService {
    * Set instance context.
    * @param fabric
    */
-  setContext(fabric: FabricClientService, identityData: IdentificationData): ChaincodeService {
+  setContext(fabric: FabricClientService, identityData: IdentificationData): ChaincodeApplication {
     this.fabric = fabric;
     this.identityData = identityData;
     this.fabric.setClientMsp(identityData.mspId);

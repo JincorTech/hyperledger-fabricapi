@@ -1,24 +1,18 @@
+import { next } from 'inversify-express-utils/dts/decorators';
+import { error } from 'util';
 import { Response, Request, NextFunction, Application } from 'express';
 import { inject, injectable } from 'inversify';
 import * as expressBearerToken from 'express-bearer-token';
-
-import {
-    AuthenticationException,
-    AuthenticationService,
-    AuthenticationServiceType,
-    BearerTokenService,
-    BearerTokenServiceType,
-    IdentificationService,
-    IdentificationServiceType
-} from '../services/identify.service';
-import { responseWithError } from '../helpers/responses';
 import { INTERNAL_SERVER_ERROR, UNAUTHORIZED } from 'http-status';
+
+import { responseWithError } from '../helpers/responses';
+import { AuthenticationException } from '../services/security/exceptions';
+import { AuthenticationServiceType } from '../services/security/authentication.service';
+import { AuthenticationService, IdentificationService } from '../services/security/interfaces';
+import { IdentificationServiceType } from '../services/security/identification.service';
 
 // IoC
 export const AuthMiddlewareType = Symbol('AuthMiddlewareType');
-
-// Exceptions
-class NotAuthorizedException extends Error { }
 
 /**
  * Authentication middleware.
