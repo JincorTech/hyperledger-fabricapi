@@ -1,4 +1,5 @@
 # Jincor Hyperledger Fabric Api
+![](https://travis-ci.org/JincorTech/hyperledger-fabricapi.svg?branch=master)
 
 This is the internal service provided a REST like API for a Hyperledger Fabric network (HLF).
 In order to access the HLF blockchain by using any other application services should use this service.
