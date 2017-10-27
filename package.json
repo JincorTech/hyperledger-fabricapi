@@ -8,10 +8,10 @@
     "start": "nodemon -w ./src -e ts ./src/server --exec ts-node",
     "lint": "tslint --fix -c tslint.json ./src/**/**/*.ts",
     "build": "tsc --outDir dist ",
-    "serve": "node ./dist/server.js"
+    "serve": "NODE_ENV=production node ./dist/server.js"
   },
   "engines": {
-    "node": ">=8.5"
+    "node": ">=8.8"
   },
   "dependencies": {
     "body-parser": "^1.18.2",
