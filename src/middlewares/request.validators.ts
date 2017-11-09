@@ -112,3 +112,12 @@ export function channelInstallChaincodeRequest(req: Request, res: Response, next
 export function channelCallChaincodeRequest(req: Request, res: Response, next: NextFunction) {
   return commonFlowRequestMiddleware(jsonSchemeChannelCallChaincodeRequest, req, res, next);
 }
+
+const jsonSchemeChannelQueryBlockRequest = Joi.object().keys({
+  block: Joi.string().regex(/^0x[\da-fA-F]+$|^[\d]+$/).empty().required(),
+  peers: Joi.array().items(Joi.string()).min(1).unique().required()
+});
+
+export function channelQueryBlockRequest(req: Request, res: Response, next: NextFunction) {
+  return commonFlowRequestMiddleware(jsonSchemeChannelQueryBlockRequest, req, res, next);
+}

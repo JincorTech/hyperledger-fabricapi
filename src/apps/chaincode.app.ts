@@ -91,7 +91,7 @@ export class ChaincodeApplication {
     eventPeer: string,
     resultOfProposal: any,
     transaction: any
-  ) {
+  ): Promise<any> {
     const transactionBroadcaster = new TransactionBroadcaster(this.fabric, channelName);
 
     const [broadcastResult, transactionEventResult] = await Promise.all([
@@ -99,7 +99,19 @@ export class ChaincodeApplication {
       this.waitPeerTransactionEvent(eventPeer || peers[0], transaction)
     ]);
 
-    return transactionEventResult;
+    return this.getResultFromResponse(resultOfProposal);
+  }
+
+  /**
+   * Extract status, data from response
+   *
+   * @param resultOfProposal
+   */
+  private getResultFromResponse(resultOfProposal: any): any {
+    if (!resultOfProposal.length) {
+      throw new InvalidEndorsementException('Response not contains data');
+    }
+    return resultOfProposal[0].map((res) => ({version: res.version, timestamp: res.timestamp, response: res.response}));
   }
 
   /**
@@ -232,7 +244,7 @@ export class ChaincodeApplication {
       );
     }
 
-    return resultOfProposal[1];
+    return this.getResultFromResponse(resultOfProposal);
   }
 
   /**

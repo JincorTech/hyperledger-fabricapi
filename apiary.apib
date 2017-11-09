@@ -22,6 +22,7 @@ that was received after login to the service.
 1. `/api/channels/{CHANNEL_NAME}/chaincodes/{CHAINCODE_ID}/actions/upgrade [POST]`
 1. `/api/channels/{CHANNEL_NAME}/chaincodes/{CHAINCODE_ID}/actions/invoke [POST]`
 1. `/api/channels/{CHANNEL_NAME}/chaincodes/{CHAINCODE_ID}/actions/query [POST]`
+1. `/api/channels/{CHANNEL_NAME}/blocks/actions/query [POST]`
 
 
 ## Service Authenication [/api/auth/login]
@@ -259,7 +260,7 @@ that was received after login to the service.
 + Response 200 (application/json)
 
             {
-                "isInvoked": true
+                "result": [{}, {}]
             }
 
 
@@ -301,5 +302,35 @@ that was received after login to the service.
                   {"balance":"1", "currency": "eth"},
                   {"balance":"1", "currency": "eth"}
                 ]
+            }
+
+## Channel: Query Block by Index or Hash [/api/channels/{CHANNEL_NAME}/blocks/actions/query]
+
++ Parameters
+    + CHANNEL_NAME (string) - existing channel name in a HLF.
+
+### Query Block by Index [POST]
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer {JWT_TOKEN}
+            Accept: application/vnd.jincor+json; version=1
+
+    + Body
+
+            {
+                "block": "5",
+                "peers": [
+                  "peer0.network.jincor.com",
+                  "peer1.network.jincor.com",
+                  "peer3.network.jincor.com"
+                ]
+            }
+
++ Response 200 (application/json)
+
+            {
+                "data": {}
             }
 

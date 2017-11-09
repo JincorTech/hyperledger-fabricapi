@@ -9,6 +9,7 @@ import * as identification from './services/security/identification.service';
 import * as authentication from './services/security/authentication.service';
 import * as certauth from './apps/certauth.app';
 import * as chaincode from './apps/chaincode.app';
+import * as info from './apps/info.app';
 
 import { AuthController } from './controllers/auth.controller';
 import { ChannelController } from './controllers/channel.controller';
@@ -33,6 +34,9 @@ container.bind<certauth.CertificateAuthorityApplication>(certauth.CertificateAut
 
 container.bind<chaincode.ChaincodeApplication>(chaincode.ChaincodeApplicationType)
   .to(chaincode.ChaincodeApplication);
+
+container.bind<info.InfoApplication>(info.InfoApplicationType)
+  .to(info.InfoApplication);
 
 // middlewares
 container.bind<commonMiddlewares.AuthMiddleware>(commonMiddlewares.AuthMiddlewareType)
@@ -63,6 +67,10 @@ container.bind<express.RequestHandler>('ChannelInstallChaincodeRequestValidator'
 );
 container.bind<express.RequestHandler>('ChannelCallChaincodeRequestValidator').toConstantValue(
   (req: any, res: any, next: any) => validators.channelCallChaincodeRequest(req, res, next)
+);
+
+container.bind<express.RequestHandler>('ChannelQueryBlockRequestValidator').toConstantValue(
+  (req: any, res: any, next: any) => validators.channelQueryBlockRequest(req, res, next)
 );
 
 /* istanbul ignore next */

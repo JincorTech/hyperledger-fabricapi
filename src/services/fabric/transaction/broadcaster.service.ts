@@ -15,7 +15,7 @@ export class TransactionBroadcaster {
    * Broadcast transaction by orderer
    * @param proposalResultResponses
    */
-  async broadcastTransaction(proposalResultResponses: any) {
+  async broadcastTransaction(proposalResultResponses: any): Promise<any> {
     const [proposalResponses, proposal] = proposalResultResponses;
 
     this.logger.verbose('Send transaction to orderer');
@@ -29,5 +29,7 @@ export class TransactionBroadcaster {
       this.logger.error('Failed to broadcast a transaction by orderer', broadcastResult);
       throw new TransactionBroadcasterException('Broadcast failed');
     }
+
+    return broadcastResult;
   }
 }

@@ -56,8 +56,8 @@ export class CertificateEnrollService {
       username,
       mspid: this.mspid,
       cryptoContent: {
-        privateKeyPath: fs.readFileSync(privateKeyPath, { encoding: 'utf8' }),
-        signedCertPath: fs.readFileSync(signedCertPath, { encoding: 'utf8' })
+        privateKeyPEM: fs.readFileSync(privateKeyPath, { encoding: 'utf8' }),
+        signedCertPEM: fs.readFileSync(signedCertPath, { encoding: 'utf8' })
       }
     });
 
