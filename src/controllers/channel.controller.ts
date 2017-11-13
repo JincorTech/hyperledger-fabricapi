@@ -1,3 +1,5 @@
+import { InfoApplication, InfoApplicationType } from '../apps/info.app';
+import { httpGet } from 'inversify-express-utils/dts/decorators';
 import { Request, Response } from 'express';
 import { inject, injectable } from 'inversify';
 import { controller, httpDelete, httpPost } from 'inversify-express-utils';
@@ -17,7 +19,8 @@ import { FabricClientService } from '../services/fabric/client.service';
 )
 export class ChannelController {
   constructor(
-    @inject(ChaincodeApplicationType) private chaincodeService: ChaincodeApplication
+    @inject(ChaincodeApplicationType) private chaincodeService: ChaincodeApplication,
+    @inject(InfoApplicationType) private infoService: InfoApplication
   ) {
   }
 
@@ -66,13 +69,7 @@ export class ChannelController {
       });
 
       // @TODO: add more verbose information
-      if (isQuery) {
-        res.json(result);
-      } else {
-        res.json({
-          isInvoked: !!result
-        });
-      }
+      res.json({result});
     } catch (error) {
       responseAsUnbehaviorError(res, error);
     }
@@ -122,4 +119,20 @@ export class ChannelController {
     await this.callChaincode(req, res, true);
   }
 
+  @httpPost(
+    '/blocks/actions/query',
+    'ChannelQueryBlockRequestValidator'
+  )
+  async queryBlock(
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
+    try {
+      this.infoService.setContext(new FabricClientService(req.identification), req.identification);
+      let result = await this.infoService.queryBlockBy(req.params.channelname, req.body.block, req.body.peers);
+      res.json({data: result});
+    } catch (error) {
+      responseAsUnbehaviorError(res, error);
+    }
+  }
 }

@@ -30,7 +30,7 @@ export class ChaincodeCommutator {
     method: string,
     args: Array<string>,
     transientMap: TransientMap
-  ) {
+  ): Promise<any> {
     this.logger.verbose('Invoke', this.channelName, this.chaincodeName, method, transaction);
     return (await this.fabric.getChannel(this.channelName)).sendTransactionProposal({
       chaincodeId: this.chaincodeName,
@@ -55,7 +55,7 @@ export class ChaincodeCommutator {
     method: string,
     args: Array<string>,
     transientMap: TransientMap
-  ) {
+  ): Promise<any> {
     this.logger.verbose('Query', this.channelName, this.chaincodeName, method, transaction);
     const channel = await this.fabric.getChannel(this.channelName);
     const responses = await channel.queryByChaincode({

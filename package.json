@@ -2,7 +2,7 @@
   "name": "fabricapi",
   "version": "0.0.1",
   "private": true,
-  "description": "Fabric Ant is a service client for Hyperledger Fabric",
+  "description": "Fabric API is a service client for Hyperledger Fabric",
   "main": "index.js",
   "scripts": {
     "start": "nodemon -w ./src -e ts ./src/server --exec ts-node",
