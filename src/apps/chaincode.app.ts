@@ -1,6 +1,7 @@
-import { injectable } from 'inversify';
+import { injectable, inject } from 'inversify';
 import 'reflect-metadata';
 
+import config from '../config';
 import { Logger } from '../logger';
 import { ChaincodePolicy } from '../services/fabric/chaincode/interfaces';
 import { FabricClientService } from '../services/fabric/client.service';
@@ -12,6 +13,8 @@ import { MspProvider } from '../services/fabric/msp.service';
 import { ProposalTransaction } from '../services/fabric/transaction/proposal.service';
 import { ChaincodeCall, ChaincodeInstall } from '../services/fabric/interfaces';
 import { ChaincodeCommutator } from '../services/fabric/chaincode/commutator.service';
+import { MessageQueue } from '../services/mq/interfaces';
+import { MessageQueueType } from '../services/mq/natsmq.service';
 
 // IoC
 export const ChaincodeApplicationType = Symbol('ChaincodeApplicationType');
@@ -24,6 +27,11 @@ export class ChaincodeApplication {
   private logger = Logger.getInstance('CHAINCODE_APPLICATION');
   private fabric: FabricClientService;
   private identityData: IdentificationData;
+
+  constructor(
+    @inject(MessageQueueType) private mq: MessageQueue
+  ) {
+  }
 
   /**
    * Set instance context.
@@ -70,9 +78,8 @@ export class ChaincodeApplication {
       const transSubs = eventHub.addForTransaction(transaction);
 
       transSubs.onEvent((eventData) => {
-        result = eventData.code === 'VALID'; // VALID will returned by peer if success
-        this.logger.verbose('Catch transaction event result', result, transaction.getTransactionID());
-        resolve(result);
+        this.logger.verbose('Catch transaction event result', eventData.code, transaction.getTransactionID());
+        resolve(eventData);
         return false;
       },
         () => { reject('Transaction event timeout ' + transaction.getTransactionID()); }
@@ -94,12 +101,13 @@ export class ChaincodeApplication {
   ): Promise<any> {
     const transactionBroadcaster = new TransactionBroadcaster(this.fabric, channelName);
 
-    const [broadcastResult, transactionEventResult] = await Promise.all([
-      transactionBroadcaster.broadcastTransaction(resultOfProposal),
-      this.waitPeerTransactionEvent(eventPeer || peers[0], transaction)
-    ]);
+    this.waitPeerTransactionEvent(eventPeer || peers[0], transaction).then((result) => {
+      this.mq.publish(`${config.mq.channelTransactions}${this.fabric.getMspId()}`, result);
+    });
 
-    return this.getResultFromResponse(resultOfProposal);
+    const broadCastResult = await transactionBroadcaster.broadcastTransaction(resultOfProposal);
+
+    return {transaction: transaction.getTransactionID(), result: this.getResultFromResponse(resultOfProposal)};
   }
 
   /**

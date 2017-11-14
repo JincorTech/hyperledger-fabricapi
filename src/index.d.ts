@@ -12,5 +12,5 @@ declare interface IdentificationData {
   username: string;
   role: string;
   networkConfigFile: string;
+  events?: Array<{peer: string; chaincodes: Array<Array<string>>}>;
 }
-
