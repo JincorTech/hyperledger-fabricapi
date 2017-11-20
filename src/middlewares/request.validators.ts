@@ -118,6 +118,15 @@ const jsonSchemeChannelQueryBlockRequest = Joi.object().keys({
   peers: Joi.array().items(Joi.string()).min(1).unique().required()
 });
 
+const jsonSchemeChannelQueryTransactionRequest = Joi.object().keys({
+  transaction: Joi.string().regex(/^[\da-fA-F]+$/).empty().required(),
+  peers: Joi.array().items(Joi.string()).min(1).unique().required()
+});
+
 export function channelQueryBlockRequest(req: Request, res: Response, next: NextFunction) {
   return commonFlowRequestMiddleware(jsonSchemeChannelQueryBlockRequest, req, res, next);
+}
+
+export function channelQueryTransactionRequest(req: Request, res: Response, next: NextFunction) {
+  return commonFlowRequestMiddleware(jsonSchemeChannelQueryTransactionRequest, req, res, next);
 }

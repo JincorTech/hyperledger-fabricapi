@@ -135,4 +135,21 @@ export class ChannelController {
       responseAsUnbehaviorError(res, error);
     }
   }
+
+  @httpPost(
+    '/transactions/actions/query',
+    'ChannelQueryTransactionRequestValidator'
+  )
+  async queryTransaction(
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
+    try {
+      this.infoService.setContext(new FabricClientService(req.identification), req.identification);
+      let result = await this.infoService.queryTransaction(req.params.channelname, req.body.transaction, req.body.peers);
+      res.json({data: result});
+    } catch (error) {
+      responseAsUnbehaviorError(res, error);
+    }
+  }
 }

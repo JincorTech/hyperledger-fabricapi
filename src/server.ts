@@ -14,9 +14,9 @@ import { NOT_ACCEPTABLE } from 'http-status';
 import config from './config';
 import { Logger, newConsoleTransport } from './logger';
 import { container } from './ioc.container';
-import { IdentificationService } from "./services/security/interfaces";
-import { MessageQueue } from "./services/mq/interfaces";
-import { IdentificationServiceType } from "./services/security/identification.service";
+import { IdentificationService } from './services/security/interfaces';
+import { MessageQueue } from './services/mq/interfaces';
+import { IdentificationServiceType } from './services/security/identification.service';
 
 winston.configure({
   level: config.logging.level,

@@ -41,16 +41,6 @@ export class EventsFabricApplication {
 
         this.fabricEvents.push(eventHub);
 
-        // this.logger.verbose('Add block events');
-        // this.fabricEvents.forEach(events => {
-        //   this.logger.verbose('Event for', client.getMspId());
-        //   events.addForBlock().onEvent((data) => {
-        //     this.logger.debug('Catch block event', client.getMspId());
-        //     this.mqService.publish(`${config.mq.channelBlocks}${client.getMspId()}`, data);
-        //     return true;
-        //   });
-        // });
-
         this.logger.verbose('Add chaincode events');
         events.chaincodes.forEach(chaincodeEvent => {
           this.logger.verbose('Event for', chaincodeEvent);

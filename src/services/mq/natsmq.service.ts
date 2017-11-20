@@ -36,8 +36,6 @@ export class NatsMQ implements MessageQueue {
       pass: config.natsPassword,
       tls: config.natsTls && {
         rejectUnauthorized: false,
-        // host: servers[0].split(':')[0],
-        // port: parseInt(servers[0].split(':')[1] || '4222', 10),
         key: config.natsTlsPrivKey,
         cert: config.natsTlsPubKey,
         ca: config.natsTlsCa

@@ -77,6 +77,9 @@ container.bind<express.RequestHandler>('ChannelCallChaincodeRequestValidator').t
 container.bind<express.RequestHandler>('ChannelQueryBlockRequestValidator').toConstantValue(
   (req: any, res: any, next: any) => validators.channelQueryBlockRequest(req, res, next)
 );
+container.bind<express.RequestHandler>('ChannelQueryTransactionRequestValidator').toConstantValue(
+  (req: any, res: any, next: any) => validators.channelQueryTransactionRequest(req, res, next)
+);
 
 /* istanbul ignore next */
 container.bind<express.RequestHandler>('AuthMiddleware').toConstantValue(

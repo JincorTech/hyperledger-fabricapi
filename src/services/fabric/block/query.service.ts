@@ -25,7 +25,7 @@ export class BlockQuery {
   ): Promise<any> {
     this.logger.verbose('Query by index', this.channelName, blockIndex);
 
-    // only for 1
+    // @TODO: Add ability to consistently querying of peers
     return (await this.fabric.getChannel(this.channelName)).queryBlock(blockIndex, peers[0]);
   }
 
@@ -40,7 +40,7 @@ export class BlockQuery {
   ): Promise<any> {
     this.logger.verbose('Query by hash', this.channelName, blockHash);
 
-    // only for 1
+    // @TODO: Add ability to consistently querying of peers
     return (await this.fabric.getChannel(this.channelName)).queryBlockByHash(blockHash, peers[0]);
   }
 }

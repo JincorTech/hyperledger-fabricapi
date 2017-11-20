@@ -23,6 +23,7 @@ that was received after login to the service.
 1. `/api/channels/{CHANNEL_NAME}/chaincodes/{CHAINCODE_ID}/actions/invoke [POST]`
 1. `/api/channels/{CHANNEL_NAME}/chaincodes/{CHAINCODE_ID}/actions/query [POST]`
 1. `/api/channels/{CHANNEL_NAME}/blocks/actions/query [POST]`
+1. `/api/channels/{CHANNEL_NAME}/transactions/actions/query [POST]`
 
 
 ## Service Authenication [/api/auth/login]
@@ -334,3 +335,32 @@ that was received after login to the service.
                 "data": {}
             }
 
+## Channel: Query Transaction by Hash [/api/channels/{CHANNEL_NAME}/transactions/actions/query]
+
++ Parameters
+    + CHANNEL_NAME (string) - existing channel name in a HLF.
+
+### Query Block by Index [POST]
+
++ Request (application/json)
+    + Headers
+
+            Authorization: Bearer {JWT_TOKEN}
+            Accept: application/vnd.jincor+json; version=1
+
+    + Body
+
+            {
+                "transaction": "..a1aaaf5a5bdc62f0a3acb9b20b9a94a2df0d1e52424d3ca37267766e40e1ec56..",
+                "peers": [
+                  "peer0.network.jincor.com",
+                  "peer1.network.jincor.com",
+                  "peer3.network.jincor.com"
+                ]
+            }
+
++ Response 200 (application/json)
+
+            {
+                "data": {}
+            }
