@@ -3,11 +3,13 @@ FROM mhart/alpine-node:8.8
 WORKDIR /usr/src/app
 
 RUN mkdir -p /usr/src/app/dist
-ADD . /usr/src/app
-ADD ./.env.template /usr/src/app/.env
+ADD . .
+ADD .env.template .env
 RUN apk add --no-cache python make g++ libc6-compat && \
-    npm --production install && \
+    npm install && \
+    npm run build && \
+    rm -rf node_modules && \
+    npm install --production && \
     apk del --purge python make g++
-RUN npm run build
 
 CMD npm run serve
