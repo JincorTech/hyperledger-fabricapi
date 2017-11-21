@@ -30,6 +30,11 @@ const {
 
   FABRICAPI_EVENTS_USERS_LIST,
 
+  FABRICAPI_CERT2ADDR_URL,
+  FABRICAPI_CERT2ADDR_USER,
+  FABRICAPI_CERT2ADDR_PASSWORD,
+  FABRICAPI_CERT2ADDR_TIMEOUT,
+
   FABRICAPI_NATS_SERVERS,
   FABRICAPI_NATS_TLS,
   FABRICAPI_NATS_TLS_PUB_KEY,
@@ -71,6 +76,12 @@ export default {
   },
   events: {
     usernames: FABRICAPI_EVENTS_USERS_LIST
+  },
+  cert2addr: {
+    url: FABRICAPI_CERT2ADDR_URL,
+    username: FABRICAPI_CERT2ADDR_USER,
+    password: FABRICAPI_CERT2ADDR_PASSWORD,
+    timeout: parseInt(FABRICAPI_CERT2ADDR_TIMEOUT, 10) || 5000
   },
   mq: {
     channelChaincodes: '/hyperledger-fabricapi/events/chaincodes/',

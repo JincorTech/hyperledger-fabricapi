@@ -30,6 +30,7 @@
     "nats": "^0.7.24",
     "reflect-metadata": "^0.1.10",
     "strong-error-handler": "^2.3.0",
+    "web-request": "^1.0.7",
     "winston": "^2.4.0"
   },
   "devDependencies": {
