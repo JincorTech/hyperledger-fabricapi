@@ -1,13 +1,14 @@
 import { ChaincodePolicy, TransientMap } from './chaincode/interfaces';
 
 export interface ChaincodeInstall {
-  isUpgrade: boolean,
-  channelName: string,
-  chaincodeId: string,
-  args: Array<string>,
-  peers: Array<string>,
-  eventPeer: string,
-  policy: ChaincodePolicy|null
+  isUpgrade: boolean;
+  channelName: string;
+  chaincodeId: string;
+  args: Array<string>;
+  peers: Array<string>;
+  eventPeer: string;
+  policy: ChaincodePolicy|null;
+  waitTransaction?: boolean;
 }
 
 export interface ChaincodeCall {
@@ -21,4 +22,5 @@ export interface ChaincodeCall {
   eventPeer: string,
   transientMap?: TransientMap;
   commitTransaction?: boolean;
+  waitTransaction?: boolean;
 }

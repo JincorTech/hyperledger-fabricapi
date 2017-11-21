@@ -39,7 +39,8 @@ export class ChannelController {
         args: req.body.args,
         peers: req.body.peers,
         eventPeer: req.body.eventPeer,
-        policy: req.body.policy
+        policy: req.body.policy,
+        waitTransaction: req.body.waitTransaction
       });
 
       // @TODO: add more verbose information
@@ -65,7 +66,8 @@ export class ChannelController {
         transientMap: req.body.transientMap,
         peers: req.body.peers,
         eventPeer: req.body.eventPeer,
-        commitTransaction: req.body.commitTransaction
+        commitTransaction: req.body.commitTransaction,
+        waitTransaction: req.body.waitTransaction
       });
 
       // @TODO: add more verbose information

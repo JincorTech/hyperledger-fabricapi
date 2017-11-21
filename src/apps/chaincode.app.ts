@@ -68,7 +68,7 @@ export class ChaincodeApplication {
    * @param peerName
    * @param transaction
    */
-  private async waitPeerTransactionEvent(peerName: string, transaction: any) {
+  private async waitPeerTransactionEvent(peerName: string, transaction: any): Promise<any> {
     if (!peerName) {
       return false;
     }
@@ -97,17 +97,27 @@ export class ChaincodeApplication {
     peers: Array<string>,
     eventPeer: string,
     resultOfProposal: any,
-    transaction: any
+    transaction: any,
+    waitTransaction: boolean = false
   ): Promise<any> {
     const transactionBroadcaster = new TransactionBroadcaster(this.fabric, channelName);
 
-    this.waitPeerTransactionEvent(eventPeer || peers[0], transaction).then((result) => {
-      this.mq.publish(`${config.mq.channelTransactions}${this.fabric.getMspId()}`, result);
-    });
+    let waitTransactionPromise = waitTransaction ?
+      this.waitPeerTransactionEvent(eventPeer || peers[0], transaction).then((result) => {
+        this.mq.publish(`${config.mq.channelTransactions}${this.fabric.getMspId()}`, result);
+        return result;
+      }) :
+      Promise.resolve({});
 
-    const broadCastResult = await transactionBroadcaster.broadcastTransaction(resultOfProposal);
+    const [broadCastResult, transactionResult] = await Promise.all([
+      transactionBroadcaster.broadcastTransaction(resultOfProposal), waitTransactionPromise
+    ]);
 
-    return {transaction: transaction.getTransactionID(), result: this.getResultFromResponse(resultOfProposal)};
+    return {
+      transaction: transaction.getTransactionID(),
+      result: this.getResultFromResponse(resultOfProposal),
+      status: transactionResult && transactionResult.code
+    };
   }
 
   /**
@@ -197,7 +207,8 @@ export class ChaincodeApplication {
       installRequest.peers,
       installRequest.eventPeer,
       resultOfProposal,
-      transaction
+      transaction,
+      installRequest.waitTransaction
     );
   }
 
@@ -248,7 +259,8 @@ export class ChaincodeApplication {
         callRequest.peers,
         callRequest.eventPeer,
         resultOfProposal,
-        transaction
+        transaction,
+        callRequest.waitTransaction
       );
     }
 

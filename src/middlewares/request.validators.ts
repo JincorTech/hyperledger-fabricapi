@@ -88,7 +88,8 @@ const jsonSchemeChannelInstallChaincodeRequest = Joi.object().keys({
       })
     ).required(),
     policy: jsonRecursiveSchemeChannelPolicy
-  })
+  }),
+  waitTransaction: Joi.boolean()
 });
 
 const jsonSchemeChannelCallChaincodeRequest = Joi.object().keys({
@@ -98,7 +99,8 @@ const jsonSchemeChannelCallChaincodeRequest = Joi.object().keys({
   peers: Joi.array().items(Joi.string()).min(1).unique().required(),
   eventPeer: Joi.string().empty().optional(),
   transientMap: Joi.object().pattern(/^/, Joi.string()),
-  commitTransaction: Joi.boolean()
+  commitTransaction: Joi.boolean(),
+  waitTransaction: Joi.boolean()
 });
 
 export function channelDeployChaincodeRequest(req: Request, res: Response, next: NextFunction) {
