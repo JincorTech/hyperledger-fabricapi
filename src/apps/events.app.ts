@@ -44,7 +44,7 @@ export class EventsFabricApplication {
         this.logger.verbose('Add chaincode events');
         events.chaincodes.forEach(chaincodeEvent => {
           this.logger.verbose('Event for', chaincodeEvent);
-          eventHub.addForChaincode(chaincodeEvent[0], chaincodeEvent[1]).onEvent((data) => {
+          eventHub.addForChaincode(chaincodeEvent[0], chaincodeEvent[1], 0).onEvent((data) => {
             this.logger.debug('Catch chaincode event', client.getMspId(), chaincodeEvent[0], chaincodeEvent[1]);
             const jsonData = {
               transactionId: data.tx_id,

@@ -12,9 +12,12 @@ export class TimeoutPromise {
    */
   start() {
     return new Promise((resolve, reject) => {
-      this.handler = setTimeout(() => {
-        resolve('timeout');
-      }, this.timeoutValue);
+      if (this.timeoutValue > 0) {
+        this.handler = setTimeout(() => {
+          this.handler = null;
+          resolve('timeout');
+        }, this.timeoutValue);
+      }
     });
   }
 
@@ -22,7 +25,9 @@ export class TimeoutPromise {
    * Stop timer
    */
   stop() {
-    clearTimeout(this.handler);
+    if (this.handler) {
+      clearTimeout(this.handler);
+    }
   }
 
   /**
