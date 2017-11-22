@@ -88,7 +88,8 @@ const jsonSchemeChannelInstallChaincodeRequest = Joi.object().keys({
       })
     ).required(),
     policy: jsonRecursiveSchemeChannelPolicy
-  })
+  }),
+  waitTransaction: Joi.boolean()
 });
 
 const jsonSchemeChannelCallChaincodeRequest = Joi.object().keys({
@@ -98,7 +99,8 @@ const jsonSchemeChannelCallChaincodeRequest = Joi.object().keys({
   peers: Joi.array().items(Joi.string()).min(1).unique().required(),
   eventPeer: Joi.string().empty().optional(),
   transientMap: Joi.object().pattern(/^/, Joi.string()),
-  commitTransaction: Joi.boolean()
+  commitTransaction: Joi.boolean(),
+  waitTransaction: Joi.boolean()
 });
 
 export function channelDeployChaincodeRequest(req: Request, res: Response, next: NextFunction) {
@@ -118,6 +120,15 @@ const jsonSchemeChannelQueryBlockRequest = Joi.object().keys({
   peers: Joi.array().items(Joi.string()).min(1).unique().required()
 });
 
+const jsonSchemeChannelQueryTransactionRequest = Joi.object().keys({
+  transaction: Joi.string().regex(/^[\da-fA-F]+$/).empty().required(),
+  peers: Joi.array().items(Joi.string()).min(1).unique().required()
+});
+
 export function channelQueryBlockRequest(req: Request, res: Response, next: NextFunction) {
   return commonFlowRequestMiddleware(jsonSchemeChannelQueryBlockRequest, req, res, next);
+}
+
+export function channelQueryTransactionRequest(req: Request, res: Response, next: NextFunction) {
+  return commonFlowRequestMiddleware(jsonSchemeChannelQueryTransactionRequest, req, res, next);
 }

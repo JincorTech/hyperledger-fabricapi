@@ -39,7 +39,8 @@ export class ChannelController {
         args: req.body.args,
         peers: req.body.peers,
         eventPeer: req.body.eventPeer,
-        policy: req.body.policy
+        policy: req.body.policy,
+        waitTransaction: req.body.waitTransaction
       });
 
       // @TODO: add more verbose information
@@ -65,7 +66,8 @@ export class ChannelController {
         transientMap: req.body.transientMap,
         peers: req.body.peers,
         eventPeer: req.body.eventPeer,
-        commitTransaction: req.body.commitTransaction
+        commitTransaction: req.body.commitTransaction,
+        waitTransaction: req.body.waitTransaction
       });
 
       // @TODO: add more verbose information
@@ -130,6 +132,23 @@ export class ChannelController {
     try {
       this.infoService.setContext(new FabricClientService(req.identification), req.identification);
       let result = await this.infoService.queryBlockBy(req.params.channelname, req.body.block, req.body.peers);
+      res.json({data: result});
+    } catch (error) {
+      responseAsUnbehaviorError(res, error);
+    }
+  }
+
+  @httpPost(
+    '/transactions/actions/query',
+    'ChannelQueryTransactionRequestValidator'
+  )
+  async queryTransaction(
+    req: AuthenticatedRequest,
+    res: Response
+  ): Promise<void> {
+    try {
+      this.infoService.setContext(new FabricClientService(req.identification), req.identification);
+      let result = await this.infoService.queryTransaction(req.params.channelname, req.body.transaction, req.body.peers);
       res.json({data: result});
     } catch (error) {
       responseAsUnbehaviorError(res, error);

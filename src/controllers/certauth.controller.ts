@@ -45,7 +45,7 @@ export class CertAuthController {
       // @TODO: add more verbose information
       res.json({
         username: req.body.username,
-        isEnrolled: !!enrollResult
+        address: enrollResult.address
       });
     } catch (error) {
       responseAsUnbehaviorError(res, error);
@@ -71,7 +71,7 @@ export class CertAuthController {
       // @TODO: add more verbose information
       res.json({
         username: req.body.username,
-        isEnrolled: !!enrollResult
+        address: enrollResult.address
       });
     } catch (error) {
       responseAsUnbehaviorError(res, error);

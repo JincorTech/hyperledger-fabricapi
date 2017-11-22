@@ -1,3 +1,4 @@
+import { GetAddressService } from '../services/cert2addr/getaddr.service';
 import * as User from 'fabric-client/lib/User.js';
 import { injectable } from 'inversify';
 import 'reflect-metadata';
@@ -23,6 +24,7 @@ export class CertificateAuthorityApplication {
   private logger = Logger.getInstance('CERTIFICATE_AUTHORITY_APPLICATION');
   private fabricCaService: FabricCaClientService;
   private identityData: IdentificationData;
+  private certAddr: GetAddressService = new GetAddressService();
 
   /**
    * Set instance context.
@@ -62,7 +64,9 @@ export class CertificateAuthorityApplication {
       this.identityData.mspId
     );
 
-    return await caEnroll.enrollFromExistingKeys(username, privateKeyPath, signedCertPath);
+    const userData = await caEnroll.enrollFromExistingKeys(username, privateKeyPath, signedCertPath);
+
+    return await this.buildEnrolledResult(userData);
   }
 
   /**
@@ -87,7 +91,16 @@ export class CertificateAuthorityApplication {
 
     this.logger.verbose('Enroll %s', username);
 
-    return await caEnroll.enrollFrom(username, password, attrs);
+    const userData = await caEnroll.enrollFrom(username, password, attrs);
+
+    return await this.buildEnrolledResult(userData);
+  }
+
+  private async buildEnrolledResult(userData: any): Promise<any> {
+    const address = await this.certAddr.getByCertificatePem(userData._identity._certificate);
+    return {
+      address
+    };
   }
 
   /**
@@ -118,6 +131,6 @@ export class CertificateAuthorityApplication {
 
     this.logger.verbose('Register new user %s', username);
 
-    return caRegistrar.register(role, username, password, affiliation, attrs);
+    return await caRegistrar.register(role, username, password, affiliation, attrs);
   }
 }

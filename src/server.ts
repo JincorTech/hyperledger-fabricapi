@@ -1,3 +1,5 @@
+import { MessageQueueType } from './services/mq/natsmq.service';
+import { EventsFabricApplication } from './apps/events.app';
 import * as express from 'express';
 import * as http from 'http';
 import * as https from 'https';
@@ -12,6 +14,9 @@ import { NOT_ACCEPTABLE } from 'http-status';
 import config from './config';
 import { Logger, newConsoleTransport } from './logger';
 import { container } from './ioc.container';
+import { IdentificationService } from './services/security/interfaces';
+import { MessageQueue } from './services/mq/interfaces';
+import { IdentificationServiceType } from './services/security/identification.service';
 
 winston.configure({
   level: config.logging.level,
@@ -72,6 +77,17 @@ if (!config.server.http && !config.server.https) {
   serverLogger.error('There is no configured HTTP(S) server');
   throw new Error('No servers configured');
 }
+
+/**
+ * Run global fabric event listener
+ */
+const eventApp = new EventsFabricApplication(
+  container.get<IdentificationService>(IdentificationServiceType),
+  container.get<MessageQueue>(MessageQueueType)
+);
+
+serverLogger.info('Start listener');
+eventApp.startListenEvents();
 
 /**
  * Create HTTP server.

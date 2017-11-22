@@ -26,7 +26,22 @@ const {
   FABRICAPI_IDENTIFY_FILE,
   FABRICAPI_IDENTIFY_SECRET,
 
-  FABRICAPI_CHAINCODE_GO_SRC_PATH
+  FABRICAPI_CHAINCODE_GO_SRC_PATH,
+
+  FABRICAPI_EVENTS_USERS_LIST,
+
+  FABRICAPI_CERT2ADDR_URL,
+  FABRICAPI_CERT2ADDR_USER,
+  FABRICAPI_CERT2ADDR_PASSWORD,
+  FABRICAPI_CERT2ADDR_TIMEOUT,
+
+  FABRICAPI_NATS_SERVERS,
+  FABRICAPI_NATS_TLS,
+  FABRICAPI_NATS_TLS_PUB_KEY,
+  FABRICAPI_NATS_TLS_PRIV_KEY,
+  FABRICAPI_NATS_TLS_CA,
+  FABRICAPI_NATS_USER,
+  FABRICAPI_NATS_PASSWORD
 } = process.env;
 
 export default {
@@ -58,5 +73,27 @@ export default {
   },
   chaincode: {
     goSrcPath: FABRICAPI_CHAINCODE_GO_SRC_PATH
+  },
+  events: {
+    usernames: FABRICAPI_EVENTS_USERS_LIST
+  },
+  cert2addr: {
+    url: FABRICAPI_CERT2ADDR_URL,
+    username: FABRICAPI_CERT2ADDR_USER,
+    password: FABRICAPI_CERT2ADDR_PASSWORD,
+    timeout: parseInt(FABRICAPI_CERT2ADDR_TIMEOUT, 10) || 5000
+  },
+  mq: {
+    channelChaincodes: '/hyperledger-fabricapi/events/chaincodes/',
+    channelTransactions: '/hyperledger-fabricapi/events/transactions/',
+    channelBlocks: '/hyperledger-fabricapi/events/blocks/',
+
+    natsServers: FABRICAPI_NATS_SERVERS || 'localhost:4222',
+    natsTls: FABRICAPI_NATS_TLS === 'true',
+    natsTlsPubKey: FABRICAPI_NATS_TLS_PUB_KEY || '',
+    natsTlsPrivKey: FABRICAPI_NATS_TLS_PRIV_KEY || '',
+    natsTlsCa: FABRICAPI_NATS_TLS_CA || '',
+    natsUser: FABRICAPI_NATS_USER || '',
+    natsPassword: FABRICAPI_NATS_PASSWORD || ''
   }
 };

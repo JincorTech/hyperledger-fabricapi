@@ -5,6 +5,8 @@ import * as express from 'express';
 import * as commonMiddlewares from './middlewares/common';
 import * as securityInterfaces from './services/security/interfaces';
 import * as token from './services/security/token.service';
+import * as mqInterfaces from './services/mq/interfaces';
+import * as natsmq from './services/mq/natsmq.service';
 import * as identification from './services/security/identification.service';
 import * as authentication from './services/security/authentication.service';
 import * as certauth from './apps/certauth.app';
@@ -28,6 +30,9 @@ container.bind<securityInterfaces.IdentificationService>(identification.Identifi
 
 container.bind<securityInterfaces.AuthenticationService>(authentication.AuthenticationServiceType)
   .to(authentication.StandardAuthenticationService).inSingletonScope();
+
+container.bind<mqInterfaces.MessageQueue>(natsmq.MessageQueueType)
+  .to(natsmq.NatsMQ).inSingletonScope();
 
 container.bind<certauth.CertificateAuthorityApplication>(certauth.CertificateAuthorityApplicationType)
   .to(certauth.CertificateAuthorityApplication);
@@ -71,6 +76,9 @@ container.bind<express.RequestHandler>('ChannelCallChaincodeRequestValidator').t
 
 container.bind<express.RequestHandler>('ChannelQueryBlockRequestValidator').toConstantValue(
   (req: any, res: any, next: any) => validators.channelQueryBlockRequest(req, res, next)
+);
+container.bind<express.RequestHandler>('ChannelQueryTransactionRequestValidator').toConstantValue(
+  (req: any, res: any, next: any) => validators.channelQueryTransactionRequest(req, res, next)
 );
 
 /* istanbul ignore next */

@@ -51,6 +51,13 @@ export class FabricClientService {
   }
 
   /**
+   * Get msp id
+   */
+  getMspId(): any {
+    return this.mspId;
+  }
+
+  /**
    * Get and query channel
    * @param channelName
    */

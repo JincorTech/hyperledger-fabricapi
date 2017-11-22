@@ -1,6 +1,7 @@
-import { injectable } from 'inversify';
+import { injectable, inject } from 'inversify';
 import 'reflect-metadata';
 
+import config from '../config';
 import { Logger } from '../logger';
 import { ChaincodePolicy } from '../services/fabric/chaincode/interfaces';
 import { FabricClientService } from '../services/fabric/client.service';
@@ -12,6 +13,8 @@ import { MspProvider } from '../services/fabric/msp.service';
 import { ProposalTransaction } from '../services/fabric/transaction/proposal.service';
 import { ChaincodeCall, ChaincodeInstall } from '../services/fabric/interfaces';
 import { ChaincodeCommutator } from '../services/fabric/chaincode/commutator.service';
+import { MessageQueue } from '../services/mq/interfaces';
+import { MessageQueueType } from '../services/mq/natsmq.service';
 
 // IoC
 export const ChaincodeApplicationType = Symbol('ChaincodeApplicationType');
@@ -24,6 +27,11 @@ export class ChaincodeApplication {
   private logger = Logger.getInstance('CHAINCODE_APPLICATION');
   private fabric: FabricClientService;
   private identityData: IdentificationData;
+
+  constructor(
+    @inject(MessageQueueType) private mq: MessageQueue
+  ) {
+  }
 
   /**
    * Set instance context.
@@ -60,7 +68,7 @@ export class ChaincodeApplication {
    * @param peerName
    * @param transaction
    */
-  private async waitPeerTransactionEvent(peerName: string, transaction: any) {
+  private async waitPeerTransactionEvent(peerName: string, transaction: any): Promise<any> {
     if (!peerName) {
       return false;
     }
@@ -70,9 +78,8 @@ export class ChaincodeApplication {
       const transSubs = eventHub.addForTransaction(transaction);
 
       transSubs.onEvent((eventData) => {
-        result = eventData.code === 'VALID'; // VALID will returned by peer if success
-        this.logger.verbose('Catch transaction event result', result, transaction.getTransactionID());
-        resolve(result);
+        this.logger.verbose('Catch transaction event result', eventData.code, transaction.getTransactionID());
+        resolve(eventData);
         return false;
       },
         () => { reject('Transaction event timeout ' + transaction.getTransactionID()); }
@@ -90,16 +97,27 @@ export class ChaincodeApplication {
     peers: Array<string>,
     eventPeer: string,
     resultOfProposal: any,
-    transaction: any
+    transaction: any,
+    waitTransaction: boolean = false
   ): Promise<any> {
     const transactionBroadcaster = new TransactionBroadcaster(this.fabric, channelName);
 
-    const [broadcastResult, transactionEventResult] = await Promise.all([
-      transactionBroadcaster.broadcastTransaction(resultOfProposal),
-      this.waitPeerTransactionEvent(eventPeer || peers[0], transaction)
+    let waitTransactionPromise = waitTransaction ?
+      this.waitPeerTransactionEvent(eventPeer || peers[0], transaction).then((result) => {
+        this.mq.publish(`${config.mq.channelTransactions}${this.fabric.getMspId()}`, result);
+        return result;
+      }) :
+      Promise.resolve({});
+
+    const [broadCastResult, transactionResult] = await Promise.all([
+      transactionBroadcaster.broadcastTransaction(resultOfProposal), waitTransactionPromise
     ]);
 
-    return this.getResultFromResponse(resultOfProposal);
+    return {
+      transaction: transaction.getTransactionID(),
+      result: this.getResultFromResponse(resultOfProposal),
+      status: transactionResult && transactionResult.code
+    };
   }
 
   /**
@@ -189,7 +207,8 @@ export class ChaincodeApplication {
       installRequest.peers,
       installRequest.eventPeer,
       resultOfProposal,
-      transaction
+      transaction,
+      installRequest.waitTransaction
     );
   }
 
@@ -240,7 +259,8 @@ export class ChaincodeApplication {
         callRequest.peers,
         callRequest.eventPeer,
         resultOfProposal,
-        transaction
+        transaction,
+        callRequest.waitTransaction
       );
     }
 

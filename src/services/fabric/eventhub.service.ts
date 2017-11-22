@@ -21,7 +21,7 @@ export class EventHub {
   protected isShutdown = false;
   protected deferred: Deferred<void>;
 
-  constructor(fabric: FabricClientService, peerName: string) {
+  constructor(protected fabric: FabricClientService, peerName: string) {
     this.eventHub = fabric.getClient().getEventHub(peerName);
   }
 
@@ -96,5 +96,12 @@ export class EventHub {
     for (let subscriber = this.subscribers.pop(); subscriber ; ) {
       subscriber.unsubscribe();
     }
+  }
+
+  /**
+   * Get associated fabric client
+   */
+  getClient(): FabricClientService {
+    return this.fabric;
   }
 }

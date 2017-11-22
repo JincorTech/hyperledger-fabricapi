@@ -5,6 +5,7 @@ import { Logger } from '../logger';
 import { InvalidArgumentException } from './exceptions';
 import { ChaincodePolicy } from '../services/fabric/chaincode/interfaces';
 import { FabricClientService } from '../services/fabric/client.service';
+import { TransactionQuery } from '../services/fabric/transaction/query.service';
 import { BlockQuery } from '../services/fabric/block/query.service';
 import { MspProvider } from '../services/fabric/msp.service';
 
@@ -54,5 +55,25 @@ export class InfoApplication {
 
     return await (new BlockQuery(this.fabric, channelName))
       .queryByIndex(peers, +indexOrHash);
+  }
+
+  /**
+   * @param hash format like 0x[0-9a-f]+
+   * @param peers
+   */
+  async queryTransaction(channelName: string, hash: string, peers: Array<string>): Promise<any> {
+    this.logger.verbose('Query transaction', hash);
+
+    const mspProvider = new MspProvider(this.fabric);
+    mspProvider.setUserContext(
+      await mspProvider.getAdminUser(this.identityData.username, this.identityData.mspId)
+    );
+
+    if (!/^[\da-fA-F]+$/.test(hash)) {
+      throw new InvalidArgumentException('Invalid transaction hash format');
+    }
+
+    return await (new TransactionQuery(this.fabric, channelName))
+      .queryByHash(peers, hash);
   }
 }
