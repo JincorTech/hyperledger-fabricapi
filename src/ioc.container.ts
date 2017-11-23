@@ -1,7 +1,9 @@
 import { Container } from 'inversify';
 import { interfaces, TYPE } from 'inversify-express-utils';
 import * as express from 'express';
+import * as basicAuth from 'express-basic-auth';
 
+import config from './config';
 import * as commonMiddlewares from './middlewares/common';
 import * as securityInterfaces from './services/security/interfaces';
 import * as token from './services/security/token.service';
@@ -17,6 +19,7 @@ import { AuthController } from './controllers/auth.controller';
 import { ChannelController } from './controllers/channel.controller';
 import { ChaincodeController } from './controllers/chaincode.controller';
 import { CertAuthController } from './controllers/certauth.controller';
+import { MetricsController } from './controllers/metrics.controller';
 import * as validators from './middlewares/request.validators';
 
 let container = new Container();
@@ -86,7 +89,17 @@ container.bind<express.RequestHandler>('AuthMiddleware').toConstantValue(
  (req: any, res: any, next: any) => authMiddleware.execute(req, res, next)
 );
 
+/* istanbul ignore next */
+container.bind<express.RequestHandler>('MetricsBasicHttpAuth').toConstantValue(
+  (req: any, res: any, next: any) => basicAuth({
+    users: { [config.metrics.authUsername]: config.metrics.authPassword },
+    unauthorizedResponse: 'Unauthorized',
+    challenge: true
+  })(req, res, next)
+);
+
 // controllers
+container.bind<interfaces.Controller>(TYPE.Controller).to(MetricsController).whenTargetNamed('MetricsController');
 container.bind<interfaces.Controller>(TYPE.Controller).to(AuthController).whenTargetNamed('AuthController');
 container.bind<interfaces.Controller>(TYPE.Controller).to(CertAuthController).whenTargetNamed('CertAuthController');
 container.bind<interfaces.Controller>(TYPE.Controller).to(ChannelController).whenTargetNamed('ChannelController');

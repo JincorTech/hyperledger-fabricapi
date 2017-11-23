@@ -10,6 +10,8 @@ import { AuthenticationException } from '../services/security/exceptions';
 import { AuthenticationServiceType } from '../services/security/authentication.service';
 import { AuthenticationService, IdentificationService } from '../services/security/interfaces';
 import { IdentificationServiceType } from '../services/security/identification.service';
+import { MetricsService } from '../services/metrics/metrics.service';
+import metrics from '../services/metrics';
 
 // IoC
 export const AuthMiddlewareType = Symbol('AuthMiddlewareType');
@@ -20,6 +22,8 @@ export const AuthMiddlewareType = Symbol('AuthMiddlewareType');
 @injectable()
 export class AuthMiddleware {
   private expressBearer;
+  private metricsService = new MetricsService();
+
   constructor(
     @inject(AuthenticationServiceType) private authenticationService: AuthenticationService,
     @inject(IdentificationServiceType) private identService: IdentificationService
@@ -45,8 +49,18 @@ export class AuthMiddleware {
         next();
       } catch (error) {
         if (error instanceof AuthenticationException) {
+
+          this.metricsService.incCounter(metrics.C_AUTH_FAILED, {
+            'status': '401'
+          });
+
           return responseWithError(res, INTERNAL_SERVER_ERROR, { error: error.message });
         }
+
+        this.metricsService.incCounter(metrics.C_AUTH_FAILED, {
+          'status': '500'
+        });
+
         return responseWithError(res, INTERNAL_SERVER_ERROR, { error });
       }
     });

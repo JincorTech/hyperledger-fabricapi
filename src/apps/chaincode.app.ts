@@ -15,6 +15,8 @@ import { ChaincodeCall, ChaincodeInstall } from '../services/fabric/interfaces';
 import { ChaincodeCommutator } from '../services/fabric/chaincode/commutator.service';
 import { MessageQueue } from '../services/mq/interfaces';
 import { MessageQueueType } from '../services/mq/natsmq.service';
+import metrics from '../services/metrics';
+import { MetricsService } from '../services/metrics/metrics.service';
 
 // IoC
 export const ChaincodeApplicationType = Symbol('ChaincodeApplicationType');
@@ -27,6 +29,7 @@ export class ChaincodeApplication {
   private logger = Logger.getInstance('CHAINCODE_APPLICATION');
   private fabric: FabricClientService;
   private identityData: IdentificationData;
+  private metricsService: MetricsService = new MetricsService();
 
   constructor(
     @inject(MessageQueueType) private mq: MessageQueue
@@ -77,12 +80,28 @@ export class ChaincodeApplication {
       const eventHub = new EventHub(this.fabric, peerName);
       const transSubs = eventHub.addForTransaction(transaction);
 
+      const metricsCommonTags = {
+        'peer': peerName
+      };
+
       transSubs.onEvent((eventData) => {
         this.logger.verbose('Catch transaction event result', eventData.code, transaction.getTransactionID());
         resolve(eventData);
+
+        this.metricsService.incCounter(metrics.C_TRANSACTION, { ...metricsCommonTags,
+          'code': eventData.code,
+          'status': '200'
+        });
+
         return false;
       },
-        () => { reject('Transaction event timeout ' + transaction.getTransactionID()); }
+        () => {
+          reject('Transaction event timeout ' + transaction.getTransactionID());
+
+          this.metricsService.incCounter(metrics.C_TRANSACTION, { ...metricsCommonTags,
+            'status': '408'
+          });
+        }
       );
 
       eventHub.wait().then(() => { resolve(result); });
@@ -109,15 +128,32 @@ export class ChaincodeApplication {
       }) :
       Promise.resolve({});
 
-    const [broadCastResult, transactionResult] = await Promise.all([
-      transactionBroadcaster.broadcastTransaction(resultOfProposal), waitTransactionPromise
-    ]);
-
-    return {
-      transaction: transaction.getTransactionID(),
-      result: this.getResultFromResponse(resultOfProposal),
-      status: transactionResult && transactionResult.code
+    const metricsCommonTags = {
+      'channelName': channelName
     };
+
+    try {
+      const [broadCastResult, transactionResult] = await Promise.all([
+        transactionBroadcaster.broadcastTransaction(resultOfProposal), waitTransactionPromise
+      ]);
+
+      this.metricsService.incCounter(metrics.C_TRANSACTION_BROADCASTED, { ...metricsCommonTags,
+        'status': '200'
+      });
+
+      return {
+        transaction: transaction.getTransactionID(),
+        result: this.getResultFromResponse(resultOfProposal),
+        status: transactionResult && transactionResult.code
+      };
+    } catch (error) {
+
+      this.metricsService.incCounter(metrics.C_TRANSACTION_BROADCASTED, { ...metricsCommonTags,
+        'status': '500'
+      });
+
+      throw error;
+    }
   }
 
   /**
@@ -179,37 +215,57 @@ export class ChaincodeApplication {
     const transaction = proposalTransaction.newTransaction(true);
     const chaincodeInstaller = new ChaincodeInstaller(this.fabric, chaincodeName);
 
+    const metricsCommonTags = {
+      'channel': installRequest.channelName,
+      'chaincode': installRequest.chaincodeId,
+      'action': installRequest.isUpgrade ? 'upgrade' : 'install'
+    };
+
     let resultOfProposal;
-    if (!installRequest.isUpgrade) {
-      resultOfProposal = await chaincodeInstaller.initiate(
-        installRequest.peers,
+    try {
+      if (!installRequest.isUpgrade) {
+        resultOfProposal = await chaincodeInstaller.initiate(
+          installRequest.peers,
+          installRequest.channelName,
+          transaction,
+          chaincodeVersion,
+          installRequest.args,
+          installRequest.policy
+        );
+      } else {
+        resultOfProposal = await chaincodeInstaller.upgrade(
+          installRequest.peers,
+          installRequest.channelName,
+          transaction,
+          chaincodeVersion,
+          installRequest.args,
+          installRequest.policy
+        );
+      }
+
+      this.checkResultOfProposal((await this.fabric.getChannel(installRequest.channelName)), proposalTransaction, resultOfProposal);
+
+      const result = await this.broadcastTransaction(
         installRequest.channelName,
-        transaction,
-        chaincodeVersion,
-        installRequest.args,
-        installRequest.policy
-      );
-    } else {
-      resultOfProposal = await chaincodeInstaller.upgrade(
         installRequest.peers,
-        installRequest.channelName,
+        installRequest.eventPeer,
+        resultOfProposal,
         transaction,
-        chaincodeVersion,
-        installRequest.args,
-        installRequest.policy
+        installRequest.waitTransaction
       );
+
+      this.metricsService.incCounter(metrics.C_CHAINCODE_INSTALL, { ...metricsCommonTags,
+        'status': '200'
+      });
+
+      return result;
+    } catch (error) {
+      this.metricsService.incCounter(metrics.C_CHAINCODE_INSTALL, { ...metricsCommonTags,
+        'status': '500'
+      });
+
+      throw error;
     }
-
-    this.checkResultOfProposal(proposalTransaction, resultOfProposal);
-
-    return await this.broadcastTransaction(
-      installRequest.channelName,
-      installRequest.peers,
-      installRequest.eventPeer,
-      resultOfProposal,
-      transaction,
-      installRequest.waitTransaction
-    );
   }
 
   /**
@@ -234,37 +290,92 @@ export class ChaincodeApplication {
     );
 
     if (callRequest.isQuery) {
-      return await chaincodeCommutator.query(
+      const metricsCommonTags = {
+        'channel': callRequest.channelName,
+        'chaincode': callRequest.chaincodeId,
+        'action': 'query'
+      };
+
+      const doneInvokeGauge = this.metricsService.startGauge(metrics.G_CHAINCODE_INVOKE_TIME);
+
+      try {
+        const result = await chaincodeCommutator.query(
+          callRequest.peers,
+          transaction,
+          callRequest.method,
+          callRequest.args,
+          callRequest.transientMap
+        );
+
+        this.metricsService.incCounter(metrics.C_CHAINCODE_INVOKE, { ...metricsCommonTags,
+          'status': '200'
+        });
+
+        return result;
+      } catch (error) {
+        this.metricsService.incCounter(metrics.C_CHAINCODE_INVOKE, { ...metricsCommonTags,
+          'status': '500'
+        });
+
+        throw error;
+      } finally {
+        doneInvokeGauge(metricsCommonTags);
+      }
+    }
+
+    const metricsCommonTags = {
+      'channel': callRequest.channelName,
+      'chaincode': callRequest.chaincodeId,
+      'commit': callRequest.commitTransaction ? '1' : '0',
+      'action': 'invoke'
+    };
+
+    const doneInvokeGauge = this.metricsService.startGauge(metrics.G_CHAINCODE_INVOKE_TIME);
+
+    try {
+      const resultOfProposal = await chaincodeCommutator.invoke(
         callRequest.peers,
         transaction,
         callRequest.method,
         callRequest.args,
         callRequest.transientMap
       );
+
+      this.checkResultOfProposal((await this.fabric.getChannel(callRequest.channelName)), proposalTransaction, resultOfProposal);
+
+      if (callRequest.commitTransaction) {
+        const result = await this.broadcastTransaction(
+          callRequest.channelName,
+          callRequest.peers,
+          callRequest.eventPeer,
+          resultOfProposal,
+          transaction,
+          callRequest.waitTransaction
+        );
+
+        this.metricsService.incCounter(metrics.C_CHAINCODE_INVOKE, { ...metricsCommonTags,
+          'status': '200'
+        });
+
+        return result;
+      }
+
+      const result = this.getResultFromResponse(resultOfProposal);
+
+      this.metricsService.incCounter(metrics.C_CHAINCODE_INVOKE, { ...metricsCommonTags,
+        'status': '200'
+      });
+
+      return result;
+    } catch (error) {
+      this.metricsService.incCounter(metrics.C_CHAINCODE_INVOKE, { ...metricsCommonTags,
+        'status': '500'
+      });
+
+      throw error;
+    } finally {
+      doneInvokeGauge(metricsCommonTags);
     }
-
-    const resultOfProposal = await chaincodeCommutator.invoke(
-      callRequest.peers,
-      transaction,
-      callRequest.method,
-      callRequest.args,
-      callRequest.transientMap
-    );
-
-    this.checkResultOfProposal(proposalTransaction, resultOfProposal);
-
-    if (callRequest.commitTransaction) {
-      return await this.broadcastTransaction(
-        callRequest.channelName,
-        callRequest.peers,
-        callRequest.eventPeer,
-        resultOfProposal,
-        transaction,
-        callRequest.waitTransaction
-      );
-    }
-
-    return this.getResultFromResponse(resultOfProposal);
   }
 
   /**
@@ -272,11 +383,11 @@ export class ChaincodeApplication {
    * @param proposalTransaction
    * @param resultOfProposal
    */
-  private checkResultOfProposal(proposalTransaction: ProposalTransaction, resultOfProposal: any) {
+  private checkResultOfProposal(channel: any, proposalTransaction: ProposalTransaction, resultOfProposal: any) {
     if (!resultOfProposal) {
       throw new InvalidEndorsementException('Result of proposal is empty');
     }
 
-    proposalTransaction.validateProposalResponses(resultOfProposal);
+    proposalTransaction.validateProposalResponses(channel, resultOfProposal);
   }
 }

@@ -30,6 +30,10 @@ const app: Application = express();
 
 app.disable('x-powered-by');
 app.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.url.indexOf('/metrics/') === 0) {
+    return next();
+  }
+
   if (req.secure) {
     res.setHeader('Strict-Transport-Security', 'max-age=31536000');
   }
@@ -44,9 +48,14 @@ app.use((req: Request, res: Response, next: NextFunction) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'deny');
   res.setHeader('Content-Security-Policy', 'default-src \'none\'');
+
   return next();
 });
 app.all('*', (req: Request, res: Response, next: NextFunction) => {
+  if (req.url.indexOf('/metrics/') === 0) {
+    return next();
+  }
+
   if (req.header('Content-Type') !== 'application/json') {
     return res.status(NOT_ACCEPTABLE).json({
       error: 'Unsupported "Content-Type"'

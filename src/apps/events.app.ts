@@ -7,10 +7,13 @@ import { MessageQueueType } from '../services/mq/natsmq.service';
 import { FabricClientService } from '../services/fabric/client.service';
 import { IdentificationService } from '../services/security/interfaces';
 import { IdentificationServiceType } from '../services/security/identification.service';
+import metrics from '../services/metrics';
+import { MetricsService } from '../services/metrics/metrics.service';
 
 export class EventsFabricApplication {
   private logger = Logger.getInstance('EVENTS-FABRIC');
   private fabricEvents: Array<EventHub> = [];
+  private metricsService = new MetricsService();
 
   constructor(
     private identService: IdentificationService,
@@ -44,15 +47,64 @@ export class EventsFabricApplication {
         this.logger.verbose('Add chaincode events');
         events.chaincodes.forEach(chaincodeEvent => {
           this.logger.verbose('Event for', chaincodeEvent);
+
           eventHub.addForChaincode(chaincodeEvent[0], chaincodeEvent[1], 0).onEvent((data) => {
             this.logger.debug('Catch chaincode event', client.getMspId(), chaincodeEvent[0], chaincodeEvent[1]);
-            const jsonData = {
-              transactionId: data.tx_id,
-              payload: data.payload.toString('utf8')
+
+            const metricsCommonTags = {
+              'peer': events.peer,
+              'chaincode': chaincodeEvent[0]
             };
-            this.mqService.publish(`${config.mq.channelChaincodes}${client.getMspId()}/${chaincodeEvent[0]}/${chaincodeEvent[1]}`, jsonData);
+
+            try {
+              const jsonData = {
+                transactionId: data.tx_id,
+                payload: data.payload.toString('utf8')
+              };
+              this.mqService.publish(`${config.mq.channelChaincodes}${client.getMspId()}/${chaincodeEvent[0]}/${chaincodeEvent[1]}`, jsonData);
+
+              this.metricsService.incCounter(metrics.C_CHAINCODE_EVENT, { ...metricsCommonTags,
+                'status': '200'
+              });
+            } catch (error) {
+              this.logger.error('Error was occurred when process chaincode event', error);
+
+              this.metricsService.incCounter(metrics.C_CHAINCODE_EVENT, { ...metricsCommonTags,
+                'status': '500'
+              });
+            }
             return true;
           });
+        });
+
+        this.logger.verbose('Add block events');
+        eventHub.addForBlock(0).onEvent((block: any) => {
+          this.logger.debug('Catch block event', client.getMspId());
+
+          const metricsCommonTags = {
+            'peer': events.peer
+          };
+
+          try {
+            const jsonData = {
+              header: block.header
+              // @TODO: maybe need payload: block.data.data
+            };
+            this.mqService.publish(`${config.mq.channelBlocks}${client.getMspId()}`, jsonData);
+
+            this.metricsService.setGauge(metrics.G_BLOCK, +block.header.number, { ...metricsCommonTags,
+              'status': '200'
+            });
+
+            this.metricsService.setGauge(metrics.G_TRANSACTIONS_IN_BLOCK, +block.data.data.length, metricsCommonTags);
+          } catch (error) {
+            this.logger.error('Error was occurred when process block event', error);
+
+            this.metricsService.setGauge(metrics.G_BLOCK, +block.header.number, { ...metricsCommonTags,
+              'status': '500'
+            });
+          }
+          return true;
         });
       });
     }));

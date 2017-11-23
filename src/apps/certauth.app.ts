@@ -1,4 +1,3 @@
-import { GetAddressService } from '../services/cert2addr/getaddr.service';
 import * as User from 'fabric-client/lib/User.js';
 import { injectable } from 'inversify';
 import 'reflect-metadata';
@@ -10,6 +9,9 @@ import { FabricClientService } from '../services/fabric/client.service';
 import { CertificateEnrollService } from '../services/fabric/ca/enroll.service';
 import { FabricCaClientService } from '../services/fabric/ca/client.service';
 import { MspProvider } from '../services/fabric/msp.service';
+import metrics from '../services/metrics';
+import { MetricsService } from '../services/metrics/metrics.service';
+import { GetAddressService } from '../services/cert2addr/getaddr.service';
 
 // IoC
 export const CertificateAuthorityApplicationType = Symbol(
@@ -25,6 +27,7 @@ export class CertificateAuthorityApplication {
   private fabricCaService: FabricCaClientService;
   private identityData: IdentificationData;
   private certAddr: GetAddressService = new GetAddressService();
+  private metricsService: MetricsService = new MetricsService();
 
   /**
    * Set instance context.
@@ -64,9 +67,21 @@ export class CertificateAuthorityApplication {
       this.identityData.mspId
     );
 
-    const userData = await caEnroll.enrollFromExistingKeys(username, privateKeyPath, signedCertPath);
+    const doneInvokeGauge = this.metricsService.startGauge(metrics.G_CERTIFICATE_ENROLL_TIME);
+    try {
+      const userData = await caEnroll.enrollFromExistingKeys(username, privateKeyPath, signedCertPath);
+      const result = await this.buildEnrolledResult(userData);
 
-    return await this.buildEnrolledResult(userData);
+      this.metricsService.incCounter(metrics.C_CERTIFICATE_ENROLL, {status: '200'});
+
+      return result;
+    } catch (error) {
+      this.metricsService.incCounter(metrics.C_CERTIFICATE_ENROLL, {status: '500'});
+
+      throw error;
+    } finally {
+      doneInvokeGauge();
+    }
   }
 
   /**
@@ -91,9 +106,21 @@ export class CertificateAuthorityApplication {
 
     this.logger.verbose('Enroll %s', username);
 
-    const userData = await caEnroll.enrollFrom(username, password, attrs);
+    const doneInvokeGauge = this.metricsService.startGauge(metrics.G_CERTIFICATE_ENROLL_TIME);
+    try {
+      const userData = await caEnroll.enrollFrom(username, password, attrs);
+      const result = await this.buildEnrolledResult(userData);
 
-    return await this.buildEnrolledResult(userData);
+      this.metricsService.incCounter(metrics.C_CERTIFICATE_ENROLL, {status: '200'});
+
+      return result;
+    } catch (error) {
+      this.metricsService.incCounter(metrics.C_CERTIFICATE_ENROLL, {status: '500'});
+
+      throw error;
+    } finally {
+      doneInvokeGauge();
+    }
   }
 
   private async buildEnrolledResult(userData: any): Promise<any> {
@@ -131,6 +158,19 @@ export class CertificateAuthorityApplication {
 
     this.logger.verbose('Register new user %s', username);
 
-    return await caRegistrar.register(role, username, password, affiliation, attrs);
+    const doneInvokeGauge = this.metricsService.startGauge(metrics.G_CERTIFICATE_REGISTER_TIME);
+    try {
+      const result = await caRegistrar.register(role, username, password, affiliation, attrs);
+
+      this.metricsService.incCounter(metrics.C_CERTIFICATE_REGISTER, {status: '200'});
+
+      return result;
+    } catch (error) {
+      this.metricsService.incCounter(metrics.C_CERTIFICATE_REGISTER, {status: '500'});
+
+      throw error;
+    } finally {
+      doneInvokeGauge();
+    }
   }
 }

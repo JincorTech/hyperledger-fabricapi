@@ -35,6 +35,9 @@ const {
   FABRICAPI_CERT2ADDR_PASSWORD,
   FABRICAPI_CERT2ADDR_TIMEOUT,
 
+  FABRICAPI_METRICS_AUTH_USERNAME,
+  FABRICAPI_METRICS_AUTH_PASSWORD,
+
   FABRICAPI_NATS_SERVERS,
   FABRICAPI_NATS_TLS,
   FABRICAPI_NATS_TLS_PUB_KEY,
@@ -82,6 +85,10 @@ export default {
     username: FABRICAPI_CERT2ADDR_USER,
     password: FABRICAPI_CERT2ADDR_PASSWORD,
     timeout: parseInt(FABRICAPI_CERT2ADDR_TIMEOUT, 10) || 5000
+  },
+  metrics: {
+    authUsername: FABRICAPI_METRICS_AUTH_USERNAME || 'metrics',
+    authPassword: FABRICAPI_METRICS_AUTH_PASSWORD || 'metrics'
   },
   mq: {
     channelChaincodes: '/hyperledger-fabricapi/events/chaincodes/',
