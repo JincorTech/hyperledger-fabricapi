@@ -21,8 +21,12 @@ export class EventHub {
   protected isShutdown = false;
   protected deferred: Deferred<void>;
 
-  constructor(protected fabric: FabricClientService, peerName: string) {
-    this.eventHub = fabric.getClient().getEventHub(peerName);
+  constructor(protected fabric: FabricClientService, protected peerName: string) {
+    this.eventHub = this.getEventHub(peerName);
+  }
+
+  private getEventHub(peerName: string): any {
+    return this.fabric.getClient().getEventHub(peerName);
   }
 
   /**
@@ -81,8 +85,20 @@ export class EventHub {
     this.subscribers.forEach((s) => s.register());
 
     this.logger.verbose('Connect');
+    this.isShutdown = false;
     this.eventHub.connect();
     this.deferred = new Deferred<void>();
+
+    this.logger.verbose('Time to test connection');
+    const watchDog = () => {
+      const timerHandler = setTimeout(() => {
+        if (!this.eventHub.isconnected()) {
+          this.reconnect();
+        }
+        watchDog();
+      }, 500); // @TODO: Replace it with config.events.watchDogInterval
+    };
+    watchDog();
 
     this.logger.verbose('Wait EventHub disconnect');
     return this.deferred.promise();
@@ -96,6 +112,22 @@ export class EventHub {
     for (let subscriber = this.subscribers.pop(); subscriber ; ) {
       subscriber.unsubscribe();
     }
+  }
+
+  /**
+   * Reconnect
+   */
+  reconnect(): boolean {
+    if (this.subscribers.length && !this.isShutdown) {
+      this.logger.verbose('Reconnecting...');
+      this.eventHub.disconnect();
+      // @TODO: Fix growing up options of eventHub._ev.options
+      this.eventHub = this.getEventHub(this.peerName);
+      this.subscribers.forEach((s) => s.register());
+      this.eventHub.connect();
+      return true;
+    }
+    return false;
   }
 
   /**

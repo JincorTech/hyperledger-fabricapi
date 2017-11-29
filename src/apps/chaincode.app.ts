@@ -75,6 +75,7 @@ export class ChaincodeApplication {
     if (!peerName) {
       return false;
     }
+
     return await new Promise((resolve, reject) => {
       let result = false;
       const eventHub = new EventHub(this.fabric, peerName);
@@ -121,12 +122,12 @@ export class ChaincodeApplication {
   ): Promise<any> {
     const transactionBroadcaster = new TransactionBroadcaster(this.fabric, channelName);
 
-    let waitTransactionPromise = waitTransaction ?
-      this.waitPeerTransactionEvent(eventPeer || peers[0], transaction).then((result) => {
+    const transactionPromise = this.waitPeerTransactionEvent(eventPeer || peers[0], transaction).then((result) => {
         this.mq.publish(`${config.mq.channelTransactions}${this.fabric.getMspId()}`, result);
         return result;
-      }) :
-      Promise.resolve({});
+      });
+
+    const waitTransactionPromise = waitTransaction ? transactionPromise : Promise.resolve({});
 
     const metricsCommonTags = {
       'channelName': channelName

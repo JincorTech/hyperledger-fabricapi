@@ -40,15 +40,14 @@ export class EventsFabricApplication {
       msp.setUserContext(user);
 
       identData.events.forEach(events => {
-        const eventHub = new EventHub(client, events.peer);
+        const eventCCHub = new EventHub(client, events.peer);
 
-        this.fabricEvents.push(eventHub);
+        this.fabricEvents.push(eventCCHub);
 
         this.logger.verbose('Add chaincode events');
         events.chaincodes.forEach(chaincodeEvent => {
           this.logger.verbose('Event for', chaincodeEvent);
-
-          eventHub.addForChaincode(chaincodeEvent[0], chaincodeEvent[1], 0).onEvent((data) => {
+          eventCCHub.addForChaincode(chaincodeEvent[0], chaincodeEvent[1], 0).onEvent((data) => {
             this.logger.debug('Catch chaincode event', client.getMspId(), chaincodeEvent[0], chaincodeEvent[1]);
 
             const metricsCommonTags = {
@@ -77,8 +76,12 @@ export class EventsFabricApplication {
           });
         });
 
+        const eventBlockHub = new EventHub(client, events.peer);
+
+        this.fabricEvents.push(eventBlockHub);
+
         this.logger.verbose('Add block events');
-        eventHub.addForBlock(0).onEvent((block: any) => {
+        eventBlockHub.addForBlock(0).onEvent((block: any) => {
           this.logger.debug('Catch block event', client.getMspId());
 
           const metricsCommonTags = {
@@ -106,6 +109,7 @@ export class EventsFabricApplication {
           }
           return true;
         });
+
       });
     }));
 
