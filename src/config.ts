@@ -78,7 +78,8 @@ export default {
     goSrcPath: FABRICAPI_CHAINCODE_GO_SRC_PATH
   },
   events: {
-    usernames: FABRICAPI_EVENTS_USERS_LIST
+    usernames: FABRICAPI_EVENTS_USERS_LIST,
+    resetHubInterval: 60000 * 5 // every 5 minute
   },
   cert2addr: {
     url: FABRICAPI_CERT2ADDR_URL,

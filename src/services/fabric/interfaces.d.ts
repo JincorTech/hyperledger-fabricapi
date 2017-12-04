@@ -19,7 +19,7 @@ export interface ChaincodeCall {
   method: string;
   args: Array<string>;
   peers: Array<string>;
-  eventPeer: string,
+  eventPeer: string;
   transientMap?: TransientMap;
   commitTransaction?: boolean;
   waitTransaction?: boolean;

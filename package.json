@@ -31,6 +31,7 @@
     "inversify-express-utils": "^4.0.1",
     "joi": "^13.0.1",
     "jsonwebtoken": "^8.1.0",
+    "lru-cache": "^4.1.1",
     "nats": "^0.7.24",
     "prom-client": "^10.2.2",
     "reflect-metadata": "^0.1.10",

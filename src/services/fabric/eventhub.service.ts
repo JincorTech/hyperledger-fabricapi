@@ -70,7 +70,6 @@ export class EventHub {
     this.logger.verbose('Remove subscriber', this.subscribers.length);
     this.subscribers.splice(this.subscribers.indexOf(subscription), 1);
     if (!this.subscribers.length && !this.isShutdown) {
-      this.logger.verbose('Disconnect');
       this.isShutdown = true;
       this.eventHub.disconnect();
       this.deferred.resolve();
@@ -89,17 +88,6 @@ export class EventHub {
     this.eventHub.connect();
     this.deferred = new Deferred<void>();
 
-    this.logger.verbose('Time to test connection');
-    const watchDog = () => {
-      const timerHandler = setTimeout(() => {
-        if (!this.eventHub.isconnected()) {
-          this.reconnect();
-        }
-        watchDog();
-      }, 500); // @TODO: Replace it with config.events.watchDogInterval
-    };
-    watchDog();
-
     this.logger.verbose('Wait EventHub disconnect');
     return this.deferred.promise();
   }
@@ -108,8 +96,13 @@ export class EventHub {
    * Unsubscribe and disconnect
    */
   stop() {
-    this.logger.verbose('Stop event hub', this.subscribers);
-    for (let subscriber = this.subscribers.pop(); subscriber ; ) {
+    this.logger.verbose('Stop event hub', this.subscribers.length);
+    let subscriber: AbstractSubscription;
+    while (true) {
+      subscriber = this.subscribers.pop();
+      if (!subscriber) {
+        return;
+      }
       subscriber.unsubscribe();
     }
   }

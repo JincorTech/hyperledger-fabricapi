@@ -95,8 +95,8 @@ const eventApp = new EventsFabricApplication(
   container.get<MessageQueue>(MessageQueueType)
 );
 
-serverLogger.info('Start listener');
-eventApp.startListenEvents();
+serverLogger.info('Start listener in blink mode');
+eventApp.runInBlinkMode();
 
 /**
  * Create HTTP server.

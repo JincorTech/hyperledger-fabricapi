@@ -123,9 +123,9 @@ export class ChaincodeApplication {
     const transactionBroadcaster = new TransactionBroadcaster(this.fabric, channelName);
 
     const transactionPromise = this.waitPeerTransactionEvent(eventPeer || peers[0], transaction).then((result) => {
-        this.mq.publish(`${config.mq.channelTransactions}${this.fabric.getMspId()}`, result);
-        return result;
-      });
+      this.mq.publish(`${config.mq.channelTransactions}${this.fabric.getMspId()}`, result);
+      return result;
+    });
 
     const waitTransactionPromise = waitTransaction ? transactionPromise : Promise.resolve({});
 

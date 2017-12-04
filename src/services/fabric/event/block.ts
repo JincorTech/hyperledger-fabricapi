@@ -38,7 +38,7 @@ export class BlockSubscription extends AbstractSubscription {
     if (this.timer) {
       this.logger.verbose('Unsubscribe', this.eventHandler);
       this.removeTimeoutTimer();
-      this.eventHub.unregisterChaincodeEvent(this.eventHandler);
+      this.eventHub.unregisterBlockEvent(this.eventHandler);
       this.eventSub.removeSubscriber(this);
     }
   }
