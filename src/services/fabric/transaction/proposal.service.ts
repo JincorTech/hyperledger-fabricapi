@@ -23,7 +23,7 @@ export class ProposalTransaction {
    * Check proposal responses
    * @param proposalResultResponses
    */
-  validateProposalResponses(proposalResultResponses: any) {
+  validateProposalResponses(channel: any, proposalResultResponses: any) {
     this.logger.verbose('Check proposal responses');
 
     const [proposalResponses, proposal] = proposalResultResponses;
@@ -33,12 +33,24 @@ export class ProposalTransaction {
       throw new EmptyProposalResponse('Empty proposal responses was received');
     }
 
+    // @TODO: Add initialized mspmanager for channel
+    // if (!channel.compareProposalResponseResults(proposalResponses)) {
+    //   this.logger.warn('Received transaction proposals are differents');
+    //   throw new ErrorProposalResponses('Received transaction proposals are differents');
+    // }
+    // proposalResponses.forEach((proposal) => {
+    //   if (!channel.verifyProposalResponse(proposal)) {
+    //     this.logger.warn('Invalid proposal received: %s', proposal);
+    //     throw new ErrorProposalResponses('Invalid proposal received');
+    //   }
+    // });
+
     const notSatisfiedProposals = proposalResponses.filter(
       (item) => !item.response || item.response.status !== 200
     );
 
     if (notSatisfiedProposals.length > 0) {
-      this.logger.verbose('Not satisfied proposals: %s', notSatisfiedProposals);
+      this.logger.warn('Not satisfied proposals: %s', notSatisfiedProposals);
       throw new ErrorProposalResponses(notSatisfiedProposals.join('; '));
     }
   }

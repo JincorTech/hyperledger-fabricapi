@@ -21,8 +21,12 @@ export class EventHub {
   protected isShutdown = false;
   protected deferred: Deferred<void>;
 
-  constructor(protected fabric: FabricClientService, peerName: string) {
-    this.eventHub = fabric.getClient().getEventHub(peerName);
+  constructor(protected fabric: FabricClientService, protected peerName: string) {
+    this.eventHub = this.getEventHub(peerName);
+  }
+
+  private getEventHub(peerName: string): any {
+    return this.fabric.getClient().getEventHub(peerName);
   }
 
   /**
@@ -66,7 +70,6 @@ export class EventHub {
     this.logger.verbose('Remove subscriber', this.subscribers.length);
     this.subscribers.splice(this.subscribers.indexOf(subscription), 1);
     if (!this.subscribers.length && !this.isShutdown) {
-      this.logger.verbose('Disconnect');
       this.isShutdown = true;
       this.eventHub.disconnect();
       this.deferred.resolve();
@@ -81,6 +84,7 @@ export class EventHub {
     this.subscribers.forEach((s) => s.register());
 
     this.logger.verbose('Connect');
+    this.isShutdown = false;
     this.eventHub.connect();
     this.deferred = new Deferred<void>();
 
@@ -92,10 +96,31 @@ export class EventHub {
    * Unsubscribe and disconnect
    */
   stop() {
-    this.logger.verbose('Stop event hub', this.subscribers);
-    for (let subscriber = this.subscribers.pop(); subscriber ; ) {
+    this.logger.verbose('Stop event hub', this.subscribers.length);
+    let subscriber: AbstractSubscription;
+    while (true) {
+      subscriber = this.subscribers.pop();
+      if (!subscriber) {
+        return;
+      }
       subscriber.unsubscribe();
     }
+  }
+
+  /**
+   * Reconnect
+   */
+  reconnect(): boolean {
+    if (this.subscribers.length && !this.isShutdown) {
+      this.logger.verbose('Reconnecting...');
+      this.eventHub.disconnect();
+      // @TODO: Fix growing up options of eventHub._ev.options
+      this.eventHub = this.getEventHub(this.peerName);
+      this.subscribers.forEach((s) => s.register());
+      this.eventHub.connect();
+      return true;
+    }
+    return false;
   }
 
   /**

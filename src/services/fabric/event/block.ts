@@ -21,7 +21,7 @@ export class BlockSubscription extends AbstractSubscription {
     this.createTimeoutTimer(this.timeout);
 
     this.eventHandler = this.eventHub.registerBlockEvent((block) => {
-      this.logger.verbose('Event', block);
+      this.logger.verbose('Event', JSON.stringify(block.header));
       this.processEvent(this.logger, block);
     }, (error) => {
       if (this.timer) {
@@ -38,7 +38,7 @@ export class BlockSubscription extends AbstractSubscription {
     if (this.timer) {
       this.logger.verbose('Unsubscribe', this.eventHandler);
       this.removeTimeoutTimer();
-      this.eventHub.unregisterChaincodeEvent(this.eventHandler);
+      this.eventHub.unregisterBlockEvent(this.eventHandler);
       this.eventSub.removeSubscriber(this);
     }
   }

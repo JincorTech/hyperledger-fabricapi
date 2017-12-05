@@ -27,7 +27,7 @@ export class ChaincodeSubscription extends AbstractSubscription {
     this.createTimeoutTimer(this.timeout);
 
     this.eventHandler = this.eventHub.registerChaincodeEvent(this.chaincodeId, this.eventName, (chaincodeEvent) => {
-      this.logger.verbose('Event', this.chaincodeId, chaincodeEvent);
+      this.logger.verbose('Event', this.chaincodeId);
       this.processEvent(this.logger, chaincodeEvent);
     }, (error) => {
       if (this.timer) {
