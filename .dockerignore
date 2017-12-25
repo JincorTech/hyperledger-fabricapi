@@ -6,3 +6,15 @@ coverage
 .nyc_output
 hfc-kvs
 msp
+credentials*.json
+call
+tools
+tls
+metrics
+chaincode
+backend-cert2addr
+call*
+need
+tmp
+*.yml
+*.tls

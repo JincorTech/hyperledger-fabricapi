@@ -1,0 +1,15 @@
+FROM mhart/alpine-node:8.8
+
+WORKDIR /usr/src/app
+
+RUN mkdir -p /usr/src/app/dist
+ADD . .
+ADD .env.template .env
+RUN apk add --update --no-cache python make g++ libc6-compat && \
+    npm install && \
+    npm run build && \
+    npm prune --production && \
+    apk del --purge python make g++ && \
+    rm -rf ./src
+
+CMD npm run serve
